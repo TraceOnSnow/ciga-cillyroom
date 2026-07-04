@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d5b450a1813c1c4787581f72cf4e41a, type: 3}
+  m_Name: SubspaceGameConfig
+  m_EditorClassIdentifier: 
+  artSet: {fileID: 11400000, guid: 68fcfdbd65af4a44982defd2570576a0, type: 2}
+  textConfig: {fileID: 11400000, guid: 5d6a42f0d6c74d54893c5caa5f9d6c11, type: 2}
+  useFixedSeed: 0
+  randomSeed: 2026
+  startingSymbols:
+  - {fileID: 11400000, guid: bfd965cb00c94a85a42475f50d1f234a, type: 2}
+  - {fileID: 11400000, guid: c82f376d92824c1199f107f1f39e06bd, type: 2}
+  - {fileID: 11400000, guid: 149be351725c444bb24981d22d60305d, type: 2}
+  - {fileID: 11400000, guid: a2ed71695f7247a4bd57f9deaf77de59, type: 2}
+  levels:
+  - {fileID: 11400000, guid: f4b0152ae6254c4eb3794130e351231a, type: 2}
+  - {fileID: 11400000, guid: 0b5f9685f55544edae795965c6131b9f, type: 2}

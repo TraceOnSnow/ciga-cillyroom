@@ -809,7 +809,7 @@ GameObject:
   - component: {fileID: 148474466}
   - component: {fileID: 148474465}
   m_Layer: 0
-  m_Name: CillyRoom Art Rig
+  m_Name: Subspace Art Rig
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2325,12 +2325,12 @@ GameObject:
   - component: {fileID: 529950987}
   - component: {fileID: 529950986}
   m_Layer: 0
-  m_Name: CillyRoom Game Controller
+  m_Name: Subspace Game Controller
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &529950986
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3730,7 +3730,7 @@ GameObject:
   - component: {fileID: 998251221}
   - component: {fileID: 998251220}
   m_Layer: 0
-  m_Name: CillyRoom Canvas
+  m_Name: Subspace Canvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4671,7 +4671,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1286981266}
   m_Layer: 0
-  m_Name: CillyRoom Component Prototype
+  m_Name: Subspace Component Prototype
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5928,8 +5928,8 @@ MonoBehaviour:
   escapeStateName: Escape
   defeatedStateName: Defeated
   attackAnimationDuration: 0.45
-  hitAnimationDuration: 0.25
-  escapeAnimationDuration: 0.65
+  hitAnimationDuration: 0.75
+  escapeAnimationDuration: 0.75
   applyFallbackColor: 0
   idleColor: {r: 1, g: 1, b: 1, a: 1}
   actionColor: {r: 1, g: 1, b: 1, a: 1}
@@ -7619,7 +7619,7 @@ GameObject:
   - component: {fileID: 1935293684}
   - component: {fileID: 1935293685}
   m_Layer: 0
-  m_Name: CillyRoom Game Director
+  m_Name: Subspace Game Director
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

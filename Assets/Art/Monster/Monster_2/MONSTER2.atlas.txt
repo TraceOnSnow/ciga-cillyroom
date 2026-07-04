@@ -1,0 +1,8 @@
+MONSTER2.png
+size:78,141
+filter:Linear,Linear
+MONS2
+bounds:2,41,74,98
+MONS22
+bounds:2,2,73,48
+rotate:180
