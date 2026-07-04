@@ -21,6 +21,7 @@ namespace Subspace.Editor
         private const string AnimatorsFolder = GeneratedFolder + "/Animators";
         private const string MusicFolder = "Assets/Art/Audio/Music";
         private const string SfxFolder = "Assets/Art/Audio/SFX";
+        private const string DisappearPrefabPath = "Assets/Art/Land/Disappear.prefab";
         private const string MonsterOneSkeletonPath = "Assets/Art/Monster/Monster_1/MONSTER1_SkeletonData.asset";
         private const string MonsterOneMaterialPath = "Assets/Art/Monster/Monster_1/MONSTER1_Material.mat";
 
@@ -407,6 +408,7 @@ namespace Subspace.Editor
 
             var board = game.boardObject.AddComponent<SubspaceBoardController>();
             board.Configure(game.boardRect, game.grid, game.cellPrefab);
+            board.SetDisappearPrefab(AssetDatabase.LoadAssetAtPath<GameObject>(DisappearPrefabPath));
 
             var selector = game.selectorObject.AddComponent<SubspaceSelectionController>();
             selector.Configure(game.selectorRect, board);

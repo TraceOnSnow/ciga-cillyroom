@@ -1,7 +1,12 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Subspace
 {
@@ -10,6 +15,12 @@ namespace Subspace
         [SerializeField] private RectTransform boardRect;
         [SerializeField] private GridLayoutGroup gridLayout;
         [SerializeField] private SubspaceSymbolCellView cellPrefab;
+        [Header("Refresh Animation")]
+        [SerializeField] private GameObject disappearPrefab;
+        [SerializeField] private float disappearLifetime = 0.8f;
+        [SerializeField] private Vector3 disappearOffset;
+        [SerializeField] private Vector2 disappearScaleMultiplier = Vector2.one;
+        [SerializeField] private bool logDisappearEffect;
 
         private readonly List<SubspaceSymbolCellView> cells = new List<SubspaceSymbolCellView>();
         private SubspaceSymbolDefinition[,] board;
@@ -31,6 +42,16 @@ namespace Subspace
             boardRect = rect;
             gridLayout = layout;
             cellPrefab = prefab;
+        }
+
+        public void SetDisappearPrefab(GameObject prefab)
+        {
+            disappearPrefab = prefab;
+        }
+
+        private void Awake()
+        {
+            AutoAssignDisappearPrefabInEditor();
         }
 
         public void Build(int newColumns, int newRows, IReadOnlyList<SubspaceSymbolDefinition> pool, System.Random rng, Func<SubspaceSymbolDefinition, Sprite> resolveSprite)
@@ -66,6 +87,7 @@ namespace Subspace
                for (int x = 0; x < columns; x++)
                {
                    var symbol = GetRandomSymbol();
+                   PlayDisappearEffect(x, y);
                    board[x, y] = symbol;
                    if (tiles[x, y] == null)
                    {
@@ -92,6 +114,7 @@ namespace Subspace
                         continue;
                     }
 
+                    PlayDisappearEffect(x, y);
                     SetCurrentSymbol(x, y, GetRandomSymbol(), false);
                 }
             }
@@ -224,6 +247,161 @@ namespace Subspace
             {
                 tiles[x, y].currentSymbol = symbol;
             }
+        }
+
+        private void PlayDisappearEffect(int x, int y)
+        {
+            AutoAssignDisappearPrefabInEditor();
+            if (disappearPrefab == null)
+            {
+                if (logDisappearEffect)
+                {
+                    Debug.LogWarning("[Subspace Board] Disappear effect skipped: prefab is missing.");
+                }
+
+                return;
+            }
+
+            if (disappearPrefab.GetComponent<RectTransform>() != null || disappearPrefab.GetComponentInChildren<Graphic>(true) != null)
+            {
+                PlayUiPrefabDisappearEffect(x, y);
+                return;
+            }
+
+            PlaySpritePrefabAsUiDisappearEffect(x, y);
+        }
+
+        private RectTransform GetCellRect(int x, int y)
+        {
+            RefreshCellSize();
+            Canvas.ForceUpdateCanvases();
+            if (gridLayout != null)
+            {
+                var gridRect = gridLayout.transform as RectTransform;
+                if (gridRect != null)
+                {
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(gridRect);
+                }
+            }
+
+            int index = y * columns + x;
+            if (index >= 0 && index < cells.Count && cells[index] != null)
+            {
+                return cells[index].GetComponent<RectTransform>();
+            }
+
+            return null;
+        }
+
+        private Vector2 GetFallbackCellLocalPosition(int x, int y)
+        {
+            Vector2 cellSize = GetCellSize();
+            Rect rect = boardRect.rect;
+            float localX = rect.xMin + cellSize.x * (x + 0.5f);
+            float localY = rect.yMax - cellSize.y * (y + 0.5f);
+            return new Vector2(localX, localY);
+        }
+
+        private void PlayUiPrefabDisappearEffect(int x, int y)
+        {
+            RectTransform cellRect = GetCellRect(x, y);
+            Transform parent = cellRect != null ? cellRect : boardRect;
+            if (parent == null)
+            {
+                return;
+            }
+
+            var instance = Instantiate(disappearPrefab, parent);
+            instance.name = $"{disappearPrefab.name} ({x}, {y})";
+
+            var rect = instance.GetComponent<RectTransform>();
+            if (rect == null)
+            {
+                rect = instance.AddComponent<RectTransform>();
+            }
+
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = cellRect != null ? (Vector2)disappearOffset : GetFallbackCellLocalPosition(x, y) + (Vector2)disappearOffset;
+            Vector2 cellSize = cellRect != null ? cellRect.rect.size : GetCellSize();
+            rect.sizeDelta = new Vector2(
+                cellSize.x * Mathf.Max(0.01f, disappearScaleMultiplier.x),
+                cellSize.y * Mathf.Max(0.01f, disappearScaleMultiplier.y));
+            instance.transform.SetAsLastSibling();
+            Destroy(instance, Mathf.Max(0.05f, disappearLifetime));
+        }
+
+        private void PlaySpritePrefabAsUiDisappearEffect(int x, int y)
+        {
+            RectTransform cellRect = GetCellRect(x, y);
+            Transform parent = cellRect != null ? cellRect : boardRect;
+            if (parent == null)
+            {
+                return;
+            }
+
+            var renderer = disappearPrefab.GetComponentInChildren<SpriteRenderer>(true);
+            if (renderer == null || renderer.sprite == null)
+            {
+                return;
+            }
+
+            var effectObject = new GameObject($"{disappearPrefab.name} UI ({x}, {y})", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            effectObject.transform.SetParent(parent, false);
+            effectObject.transform.SetAsLastSibling();
+
+            var rect = effectObject.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = cellRect != null ? (Vector2)disappearOffset : GetFallbackCellLocalPosition(x, y) + (Vector2)disappearOffset;
+
+            Vector2 cellSize = cellRect != null ? cellRect.rect.size : GetCellSize();
+            rect.sizeDelta = new Vector2(
+                cellSize.x * Mathf.Max(0.01f, disappearScaleMultiplier.x),
+                cellSize.y * Mathf.Max(0.01f, disappearScaleMultiplier.y));
+
+            var image = effectObject.GetComponent<Image>();
+            image.sprite = renderer.sprite;
+            image.color = renderer.color;
+            image.raycastTarget = false;
+            image.preserveAspect = true;
+
+            StartCoroutine(PlayUiDisappearFallback(effectObject, image));
+            if (logDisappearEffect)
+            {
+                Debug.Log($"[Subspace Board] Played UI disappear effect at ({x}, {y}) under {(cellRect != null ? cellRect.name : parent.name)}.");
+            }
+        }
+
+        private IEnumerator PlayUiDisappearFallback(GameObject effectObject, Image image)
+        {
+            float duration = Mathf.Max(0.05f, disappearLifetime);
+            float elapsed = 0f;
+            Vector3 startScale = effectObject.transform.localScale;
+
+            while (elapsed < duration)
+            {
+                float t = elapsed / duration;
+                float alpha = Mathf.Lerp(1f, 0f, t);
+                image.color = new Color(image.color.r, image.color.g, image.color.b, alpha);
+                effectObject.transform.localScale = Vector3.Lerp(startScale, startScale * 1.12f, t);
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+
+            Destroy(effectObject);
+        }
+
+        private void AutoAssignDisappearPrefabInEditor()
+        {
+#if UNITY_EDITOR
+            if (disappearPrefab == null)
+            {
+                disappearPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/Land/Disappear.prefab");
+            }
+#endif
         }
     }
 }
