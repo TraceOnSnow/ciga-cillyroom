@@ -546,7 +546,9 @@ namespace CillyRoomPrototype
             boardGrid.childAlignment = TextAnchor.UpperLeft;
             boardGrid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
 
-            var selectorImage = CreateImage(boardRect, "SelectionBox", artSet.selectorColor);
+            var selectorColor = artSet.selectorColor;
+            selectorColor.a = 0.33333334f;
+            var selectorImage = CreateImage(boardRect, "SelectionBox", selectorColor);
             selectorRect = selectorImage.rectTransform;
             var outline = selectorImage.gameObject.AddComponent<Outline>();
             outline.effectColor = artSet.selectorOutlineColor;

@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: "\u4E9A\u7A7A\u95F4\u88C2\u7F1D"
   kind: 6
   baseScore: -5
-  tintColor: {r: 0.96, g: 0.82, b: 0.22, a: 1}
+  tintColor: {r: 0.96, g: 0.22, b: 0.5, a: 1}
   artwork: {fileID: 0}
   effect: 0
   effectMultiplier: 2

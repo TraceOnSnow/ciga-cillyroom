@@ -99,7 +99,7 @@ namespace CillyRoomPrototype.Editor
                     asset.playerAttackColor = new Color(0.99f, 0.73f, 0.2f, 1f);
                     asset.enemyColor = new Color(0.86f, 0.24f, 0.22f, 1f);
                     asset.defeatedEnemyColor = new Color(0.32f, 0.32f, 0.36f, 1f);
-                    asset.selectorColor = new Color(1f, 0.56f, 0.18f, 0.24f);
+                    asset.selectorColor = new Color(1f, 0.56f, 0.18f, 0.33333334f);
                     asset.selectorOutlineColor = new Color(1f, 0.43f, 0.12f, 1f);
                     asset.accentColor = new Color(0.09f, 0.72f, 0.94f, 1f);
                 });
@@ -384,7 +384,7 @@ namespace CillyRoomPrototype.Editor
             var cellPrefab = CreateSymbolCellPrefab(boardPanel.transform, artSet);
             cellPrefab.gameObject.SetActive(false);
 
-            var selectorObject = CreatePanel(boardPanel.transform, "Selection Box", Transparent(artSet.selectorColor), false);
+            var selectorObject = CreatePanel(boardPanel.transform, "Selection Box", WithAlpha(artSet.selectorColor, 0.33333334f), false);
             selectorObject.raycastTarget = false;
             var selectorOutline = selectorObject.gameObject.AddComponent<Outline>();
             selectorOutline.effectColor = artSet.selectorOutlineColor;
@@ -650,9 +650,9 @@ namespace CillyRoomPrototype.Editor
             rect.sizeDelta = new Vector2(width, height);
         }
 
-        private static Color Transparent(Color color)
+        private static Color WithAlpha(Color color, float alpha)
         {
-            color.a = 0f;
+            color.a = alpha;
             return color;
         }
 

@@ -151,7 +151,7 @@ namespace CillyRoomPrototype
             totalScore += result.total;
             remainingTurns = Mathf.Max(0, remainingTurns - 1 + result.turnDelta);
             ui.Refresh(currentLevel, totalScore, remainingTurns, result.total, result.lines);
-            LogScoreSources(result);
+            LogScoreSources(result, selection.CurrentSelection);
 
             yield return player.PlayAttack(GetPlayerAttack());
             yield return enemy.PlayHit(GetEnemyDefeated(), 0.25f);
@@ -209,11 +209,19 @@ namespace CillyRoomPrototype
             return artRig != null ? artRig.GetSymbolSprite(symbol) : symbol != null ? symbol.artwork : null;
         }
 
-        private void LogScoreSources(CillyRoomScoreResult result)
+        private void LogScoreSources(CillyRoomScoreResult result, RectInt selectedArea)
         {
             var builder = new StringBuilder();
-            builder.Append("[CillyRoom Score] ");
+            builder.Append("[CillyRoom Score Detail] ");
             builder.Append(currentLevel != null ? currentLevel.displayName : "Unknown Level");
+            builder.Append(" | Selection: x ");
+            builder.Append(selectedArea.xMin);
+            builder.Append("-");
+            builder.Append(selectedArea.xMax - 1);
+            builder.Append(", y ");
+            builder.Append(selectedArea.yMin);
+            builder.Append("-");
+            builder.Append(selectedArea.yMax - 1);
             builder.Append(" | Round Score: ");
             builder.Append(result.total);
             builder.Append(" | Total Score: ");
@@ -246,14 +254,34 @@ namespace CillyRoomPrototype
 
                 builder.Append(": ");
                 builder.Append(source.finalScore);
+                builder.Append(" = ");
+                builder.Append(source.baseScore);
 
                 if (source.multiplier != 1)
                 {
-                    builder.Append(" = ");
-                    builder.Append(source.baseScore);
                     builder.Append(" x");
                     builder.Append(source.multiplier);
                 }
+
+                if (source.originalScore != source.baseScore)
+                {
+                    builder.Append(" (原始 ");
+                    builder.Append(source.originalScore);
+                    builder.Append(")");
+                }
+
+                if (!string.IsNullOrWhiteSpace(source.detail))
+                {
+                    builder.Append(" | ");
+                    builder.Append(source.detail);
+                }
+            }
+
+            if (result.lines != null && result.lines.Count > 0)
+            {
+                builder.AppendLine();
+                builder.Append("  Effects: ");
+                builder.Append(string.Join(" / ", result.lines));
             }
 
             Debug.Log(builder.ToString());

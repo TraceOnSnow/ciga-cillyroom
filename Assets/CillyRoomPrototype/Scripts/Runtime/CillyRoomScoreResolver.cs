@@ -23,17 +23,21 @@ namespace CillyRoomPrototype
     {
         public readonly string displayName;
         public readonly Vector2Int position;
+        public readonly int originalScore;
         public readonly int baseScore;
         public readonly int multiplier;
         public readonly int finalScore;
+        public readonly string detail;
 
-        public CillyRoomScoreSource(string displayName, Vector2Int position, int baseScore, int multiplier, int finalScore)
+        public CillyRoomScoreSource(string displayName, Vector2Int position, int originalScore, int baseScore, int multiplier, int finalScore, string detail = "")
         {
             this.displayName = displayName;
             this.position = position;
+            this.originalScore = originalScore;
             this.baseScore = baseScore;
             this.multiplier = multiplier;
             this.finalScore = finalScore;
+            this.detail = detail;
         }
     }
 
@@ -44,8 +48,11 @@ namespace CillyRoomPrototype
         public static CillyRoomScoreResult Calculate(CillyRoomSymbolDefinition[,] board, RectInt selection, System.Random random = null)
         {
             var baseScores = new Dictionary<Vector2Int, int>();
+            var originalScores = new Dictionary<Vector2Int, int>();
             var multipliers = new Dictionary<Vector2Int, int>();
+            var sourceDetails = new Dictionary<Vector2Int, List<string>>();
             var positions = new List<Vector2Int>();
+            var energyCorePositions = new List<Vector2Int>();
             var lines = new List<string>();
             var sources = new List<CillyRoomScoreSource>();
 
@@ -80,15 +87,18 @@ namespace CillyRoomPrototype
                     {
                         case CillyRoomSymbolKind.LifeSignal:
                             score = RollInclusive(random, 1, 6);
+                            AddDetail(sourceDetails, position, $"生命信号随机得分 {score}");
                             lifeSignalCount++;
                             break;
                         case CillyRoomSymbolKind.RealitySingularity:
                             score = RollInclusive(random, -2, 5);
+                            AddDetail(sourceDetails, position, $"现实奇点随机基础分 {score}");
                             break;
                         case CillyRoomSymbolKind.Anchor:
                             hasSelectedAnchor = true;
                             break;
                         case CillyRoomSymbolKind.EnergyCore:
+                            energyCorePositions.Add(position);
                             energyCoreCount++;
                             break;
                         case CillyRoomSymbolKind.CosmicDust:
@@ -96,27 +106,33 @@ namespace CillyRoomPrototype
                             break;
                     }
 
+                    originalScores[position] = score;
                     baseScores[position] = score;
                 }
             }
 
-            ApplyAnchorEffects(board, baseScores, positions, cosmicDustCount, lines);
-            ApplySubspaceRifts(board, baseScores, positions, hasSelectedAnchor, lines);
-            ApplyRealitySingularities(board, baseScores, multipliers, positions, lines);
+            ApplyAnchorEffects(board, baseScores, sourceDetails, positions, cosmicDustCount, lines);
+            ApplySubspaceRifts(board, baseScores, sourceDetails, positions, hasSelectedAnchor, lines);
+            ApplyRealitySingularities(board, baseScores, multipliers, sourceDetails, positions, lines);
 
             int turnDelta = 0;
             if (lifeSignalCount >= 5)
             {
                 baseScores[BonusScoreKey] = 25;
+                originalScores[BonusScoreKey] = 25;
                 multipliers[BonusScoreKey] = 1;
                 lines.Add("生命体检测: +25");
-                sources.Add(new CillyRoomScoreSource("生命体检测", BonusScoreKey, 25, 1, 25));
+                sources.Add(new CillyRoomScoreSource("生命体检测", BonusScoreKey, 25, 25, 1, 25, "5 个生命信号在同一框内触发一次性奖励"));
             }
 
             if (energyCoreCount >= 5)
             {
                 turnDelta += 1;
                 lines.Add("能量核心: 回合 +1");
+                foreach (var position in energyCorePositions)
+                {
+                    AddDetail(sourceDetails, position, "5 个能量核心在同一框内，额外获得 1 次出牌机会");
+                }
             }
 
             int total = 0;
@@ -134,7 +150,9 @@ namespace CillyRoomPrototype
                 var symbol = board[entry.Key.x, entry.Key.y];
                 string suffix = multiplier != 1 ? $" x{multiplier}" : string.Empty;
                 lines.Add($"{symbol.SafeDisplayName}: {entry.Value}{suffix}");
-                sources.Add(new CillyRoomScoreSource(symbol.SafeDisplayName, entry.Key, entry.Value, multiplier, finalScore));
+                int originalScore = originalScores.TryGetValue(entry.Key, out var original) ? original : entry.Value;
+                string detail = sourceDetails.TryGetValue(entry.Key, out var details) ? string.Join("; ", details) : string.Empty;
+                sources.Add(new CillyRoomScoreSource(symbol.SafeDisplayName, entry.Key, originalScore, entry.Value, multiplier, finalScore, detail));
             }
 
             return new CillyRoomScoreResult(total, turnDelta, lines, sources);
@@ -143,6 +161,7 @@ namespace CillyRoomPrototype
         private static void ApplyAnchorEffects(
             CillyRoomSymbolDefinition[,] board,
             Dictionary<Vector2Int, int> baseScores,
+            Dictionary<Vector2Int, List<string>> sourceDetails,
             IReadOnlyList<Vector2Int> positions,
             int cosmicDustCount,
             List<string> lines)
@@ -178,11 +197,13 @@ namespace CillyRoomPrototype
                 if (beaconBonus > 0)
                 {
                     lines.Add($"锚点: 相邻信标 +{beaconBonus}");
+                    AddDetail(sourceDetails, position, $"相邻信标 {adjacentBeaconCount} 个，锚点 +{beaconBonus}");
                 }
 
                 if (dustPenalty > 0)
                 {
                     lines.Add($"宇宙尘埃: 锚点数值 -{dustPenalty}");
+                    AddDetail(sourceDetails, position, $"框内宇宙尘埃 {cosmicDustCount} 个，锚点 -{dustPenalty}");
                 }
 
             }
@@ -191,6 +212,7 @@ namespace CillyRoomPrototype
         private static void ApplySubspaceRifts(
             CillyRoomSymbolDefinition[,] board,
             Dictionary<Vector2Int, int> baseScores,
+            Dictionary<Vector2Int, List<string>> sourceDetails,
             IReadOnlyList<Vector2Int> positions,
             bool hasSelectedAnchor,
             List<string> lines)
@@ -206,6 +228,7 @@ namespace CillyRoomPrototype
                 if (hasSelectedAnchor)
                 {
                     lines.Add("锚点: 抵消同框亚空间裂缝");
+                    AddDetail(sourceDetails, position, "同一框内存在锚点，亚空间裂缝效果被抵消");
                     continue;
                 }
 
@@ -215,6 +238,8 @@ namespace CillyRoomPrototype
                     {
                         baseScores[adjacent] = 0;
                         lines.Add("亚空间裂缝: 相邻信标失效");
+                        AddDetail(sourceDetails, adjacent, "被相邻亚空间裂缝影响，基础数值变为 0");
+                        AddDetail(sourceDetails, position, $"使相邻信标 ({adjacent.x}, {adjacent.y}) 基础数值变为 0");
                     }
                 }
             }
@@ -224,6 +249,7 @@ namespace CillyRoomPrototype
             CillyRoomSymbolDefinition[,] board,
             Dictionary<Vector2Int, int> baseScores,
             Dictionary<Vector2Int, int> multipliers,
+            Dictionary<Vector2Int, List<string>> sourceDetails,
             IReadOnlyList<Vector2Int> positions,
             List<string> lines)
         {
@@ -240,11 +266,29 @@ namespace CillyRoomPrototype
                     if (baseScores.ContainsKey(adjacent))
                     {
                         multipliers[adjacent] *= 2;
+                        AddDetail(sourceDetails, adjacent, $"被相邻现实奇点影响，倍率 x2");
                     }
                 }
 
                 lines.Add("现实奇点: 相邻元素数值 x2");
+                AddDetail(sourceDetails, position, "使相邻元素数值 x2");
             }
+        }
+
+        private static void AddDetail(Dictionary<Vector2Int, List<string>> details, Vector2Int position, string detail)
+        {
+            if (string.IsNullOrWhiteSpace(detail))
+            {
+                return;
+            }
+
+            if (!details.TryGetValue(position, out var list))
+            {
+                list = new List<string>();
+                details[position] = list;
+            }
+
+            list.Add(detail);
         }
 
         private static int RollInclusive(System.Random random, int minInclusive, int maxInclusive)

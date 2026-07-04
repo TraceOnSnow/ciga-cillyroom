@@ -37,6 +37,6 @@ MonoBehaviour:
   playerAttackColor: {r: 0.99, g: 0.73, b: 0.2, a: 1}
   enemyColor: {r: 0.86, g: 0.24, b: 0.22, a: 1}
   defeatedEnemyColor: {r: 0.32, g: 0.32, b: 0.36, a: 1}
-  selectorColor: {r: 1, g: 0.56, b: 0.18, a: 0.24}
+  selectorColor: {r: 1, g: 0.56, b: 0.18, a: 0.33333334}
   selectorOutlineColor: {r: 1, g: 0.43, b: 0.12, a: 1}
   accentColor: {r: 0.09, g: 0.72, b: 0.94, a: 1}

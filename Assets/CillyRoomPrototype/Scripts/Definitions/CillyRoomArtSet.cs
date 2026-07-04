@@ -33,7 +33,7 @@ namespace CillyRoomPrototype
         public Color playerAttackColor = new Color(0.99f, 0.73f, 0.2f, 1f);
         public Color enemyColor = new Color(0.86f, 0.24f, 0.22f, 1f);
         public Color defeatedEnemyColor = new Color(0.32f, 0.32f, 0.36f, 1f);
-        public Color selectorColor = new Color(1f, 0.56f, 0.18f, 0.24f);
+        public Color selectorColor = new Color(1f, 0.56f, 0.18f, 0.33333334f);
         public Color selectorOutlineColor = new Color(1f, 0.43f, 0.12f, 1f);
         public Color accentColor = new Color(0.09f, 0.72f, 0.94f, 1f);
     }
