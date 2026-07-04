@@ -361,7 +361,7 @@ namespace Subspace
             public const string Unknown = "\u672a\u77e5";
             public const string EmptyTile = "\u7a7a\u5730\u5757";
             public const string EmptyTileDescription = "\u5f53\u524d\u6ca1\u6709\u7b26\u53f7\u3002";
-            public const string PrototypeSymbolDescription = "\u4e34\u65f6\u7b26\u53f7\u3002\u4e4b\u540e\u53ef\u4ee5\u8fc1\u79fb\u5230 ScriptableObject \u914d\u7f6e\u3002";
+            public const string PrototypeSymbolDescription = "\u7b56\u5212\u6848\u5143\u7d20\u3002\u5177\u4f53\u6548\u679c\u89c1\u5373\u65f6\u5f97\u5206\u548c\u5730\u5757\u57f9\u517b\u3002";
             public const string Anchor = "\u951a\u70b9";
             public const string Crystal = "\u6676\u4f53";
             public const string LifeSignal = "\u751f\u547d\u4fe1\u53f7";

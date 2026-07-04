@@ -9,6 +9,7 @@ namespace Subspace
         private const int MaxBuffIcons = 3;
 
         [SerializeField] private Image icon;
+        [SerializeField] private Image symbolIcon;
         [SerializeField] private Text label;
         [SerializeField] private RectTransform buffContainer;
         [SerializeField] private Text baseBonusText;
@@ -36,14 +37,23 @@ namespace Subspace
 
             if (icon != null)
             {
-                icon.sprite = sprite;
-                icon.color = sprite != null ? Color.white : symbol != null ? symbol.SafeTint : Color.white;
+                icon.sprite = null;
+                icon.color = symbol != null ? Color.Lerp(new Color(0.07f, 0.08f, 0.1f, 1f), symbol.SafeTint, 0.28f) : Color.white;
                 icon.raycastTarget = true;
+            }
+
+            if (symbolIcon != null)
+            {
+                symbolIcon.gameObject.SetActive(sprite != null);
+                symbolIcon.sprite = sprite;
+                symbolIcon.color = sprite != null ? Color.white : Color.clear;
+                symbolIcon.preserveAspect = true;
+                symbolIcon.raycastTarget = false;
             }
 
             if (label != null)
             {
-                label.text = symbol != null ? SubspaceTileRulebook.GetSymbolData(symbol).displayName : string.Empty;
+                label.text = sprite == null && symbol != null ? SubspaceTileRulebook.GetSymbolData(symbol).displayName : string.Empty;
                 label.color = symbol != null && symbol.SafeTint.grayscale > 0.68f ? Color.black : Color.white;
                 label.raycastTarget = false;
             }
@@ -93,6 +103,22 @@ namespace Subspace
             if (icon == null)
             {
                 icon = GetComponent<Image>();
+            }
+
+            if (symbolIcon == null)
+            {
+                var iconObject = new GameObject("Symbol Icon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                iconObject.transform.SetParent(transform, false);
+                symbolIcon = iconObject.GetComponent<Image>();
+                symbolIcon.preserveAspect = true;
+                symbolIcon.raycastTarget = false;
+
+                var iconRect = symbolIcon.rectTransform;
+                iconRect.anchorMin = new Vector2(0.16f, 0.16f);
+                iconRect.anchorMax = new Vector2(0.84f, 0.84f);
+                iconRect.offsetMin = Vector2.zero;
+                iconRect.offsetMax = Vector2.zero;
+                iconRect.pivot = new Vector2(0.5f, 0.5f);
             }
 
             if (buffContainer == null)

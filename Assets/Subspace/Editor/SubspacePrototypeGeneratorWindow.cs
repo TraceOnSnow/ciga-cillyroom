@@ -517,6 +517,7 @@ namespace Subspace.Editor
             var playerAnimator = game.playerObject.AddComponent<Animator>();
             playerAnimator.runtimeAnimatorController = playerAnimatorController;
             player.Configure(game.playerImage, game.playerObject.AddComponent<SpriteRenderer>(), game.playerObject.AddComponent<Rigidbody2D>(), playerAnimator);
+            player.AddMirrorImage(game.playerPortraitImage);
 
             var enemy = game.enemyObject.AddComponent<SubspaceActorController>();
             var enemyAnimator = game.enemyObject.AddComponent<Animator>();
@@ -703,7 +704,7 @@ namespace Subspace.Editor
             Stretch(targetText.rectTransform);
 
             var playerObject = CreateCharacter(topPanel.transform, "Top Player Actor", 78f, 24f, 250f, 78f, Color.white, textConfig.playerLabel, out var playerImage);
-            var enemyObject = CreateCharacter(topPanel.transform, "Enemy Actor", 915f, 24f, 250f, 78f, Color.white, textConfig.enemyLabel, out var enemyImage);
+            var enemyObject = CreateCharacter(topPanel.transform, "Enemy Actor", 915f, 6f, 250f, 78f, Color.white, textConfig.enemyLabel, out var enemyImage);
             var beamStartPoint = CreateBeamPoint(playerObject.transform, "Player Beam Start Point", 96f, 38f);
             var beamEndPoint = CreateBeamPoint(enemyObject.transform, "Enemy Beam Hit Point", 26f, 38f);
 
@@ -711,11 +712,18 @@ namespace Subspace.Editor
             SetLowerLeft(buffPanel.rectTransform, 20f, 286f, 210f, 234f);
             var buffTitle = CreateText(buffPanel.transform, "Buff Title", textConfig.buffPanelTitle, 24, Color.white, TextAnchor.MiddleLeft);
             SetLowerLeft(buffTitle.rectTransform, 18f, 178f, 170f, 42f);
+            var upgradeText = CreateText(buffPanel.transform, "Selected Upgrades Text", "\u9053\u5177/\u589e\u76ca\n-", 15, new Color(0.92f, 0.95f, 1f, 1f), TextAnchor.UpperLeft);
+            SetLowerLeft(upgradeText.rectTransform, 18f, 20f, 174f, 158f);
 
             var playerPanel = CreatePanel(root.transform, "Player Animation Panel", new Color(0.12f, 0.13f, 0.15f, 0.98f), true);
             SetLowerLeft(playerPanel.rectTransform, 20f, 20f, 210f, 250f);
             var playerPanelTitle = CreateText(playerPanel.transform, "Player Animation Title", textConfig.playerAnimationPanelTitle, 24, Color.white, TextAnchor.MiddleLeft);
             SetLowerLeft(playerPanelTitle.rectTransform, 18f, 196f, 170f, 42f);
+            var playerPortrait = CreatePanel(playerPanel.transform, "Player Portrait", Color.white, false);
+            playerPortrait.preserveAspect = true;
+            playerPortrait.raycastTarget = false;
+            playerPortrait.color = Color.clear;
+            SetLowerLeft(playerPortrait.rectTransform, 26f, 24f, 158f, 164f);
 
             var boardPanel = CreatePanel(root.transform, "Board Panel", artSet.boardColor, true);
             SetLowerLeft(boardPanel.rectTransform, 250f, 45f, 475f, 475f);
@@ -742,7 +750,9 @@ namespace Subspace.Editor
 
             var scorePanel = CreatePanel(rightPanel.transform, "Score Panel", new Color(0.12f, 0.2f, 0.25f, 1f), true);
             SetLowerLeft(scorePanel.rectTransform, 32f, 350f, 210f, 88f);
-            var scoreText = CreateText(scorePanel.transform, "Score Text", string.Empty, 24, Color.white, TextAnchor.MiddleCenter);
+            var scoreText = CreateText(scorePanel.transform, "Score Text", "\u4e0a\u6b21\u4f24\u5bb3\n-", 24, Color.white, TextAnchor.MiddleCenter);
+            scoreText.raycastTarget = true;
+            scoreText.gameObject.AddComponent<SubspaceDamageTooltipTarget>();
             Stretch(scoreText.rectTransform);
 
             var roundBox = CreatePanel(rightPanel.transform, "Round Score Box", new Color(0.09f, 0.16f, 0.2f, 1f), true);
@@ -754,9 +764,6 @@ namespace Subspace.Editor
             SetLowerLeft(turnBox.rectTransform, 56f, 126f, 162f, 96f);
             var turnText = CreateText(turnBox.transform, "Turn Text", string.Empty, 24, Color.white, TextAnchor.MiddleCenter);
             Stretch(turnText.rectTransform);
-
-            var upgradeText = CreateText(rightPanel.transform, "Selected Upgrades Text", "\u5df2\u9009\u5347\u7ea7\n-", 16, new Color(0.92f, 0.95f, 1f, 1f), TextAnchor.UpperLeft);
-            SetLowerLeft(upgradeText.rectTransform, 28f, 108f, 220f, 70f);
 
             var attackButton = CreateButton(rightPanel.transform, "Attack Button", textConfig.attackButtonText, new Color(0.78f, 0.24f, 0.18f, 1f));
             SetLowerLeft(attackButton.GetComponent<RectTransform>(), 26f, 18f, 224f, 88f);
@@ -787,6 +794,7 @@ namespace Subspace.Editor
                 selectorRect = selectorObject.rectTransform,
                 playerObject = playerObject,
                 playerImage = playerImage,
+                playerPortraitImage = playerPortrait,
                 enemyObject = enemyObject,
                 enemyImage = enemyImage,
                 beamStartPoint = beamStartPoint,
@@ -853,6 +861,7 @@ namespace Subspace.Editor
             var actor = CreatePanel(parent, name, color, true);
             SetLowerLeft(actor.rectTransform, x, y, width, height);
             image = actor;
+            image.preserveAspect = true;
             var text = CreateText(actor.transform, "Label", label, 22, Color.white, TextAnchor.MiddleCenter);
             Stretch(text.rectTransform);
             return actor.gameObject;
@@ -875,7 +884,7 @@ namespace Subspace.Editor
             var spineObject = CreateChild(parent, "Enemy Spine Graphic", typeof(RectTransform), typeof(CanvasRenderer));
             var rect = spineObject.GetComponent<RectTransform>();
             Stretch(rect);
-            rect.anchoredPosition = new Vector2(0f, -24f);
+            rect.anchoredPosition = new Vector2(0f, -42f);
             rect.sizeDelta = new Vector2(180f, 180f);
 
             var components = SkeletonGraphic.AddSkeletonGraphicAnimationComponents(spineObject, LoadMonsterOneSkeleton(), LoadMonsterOneMaterial(), true);
@@ -1356,6 +1365,7 @@ namespace Subspace.Editor
             public RectTransform selectorRect;
             public GameObject playerObject;
             public Image playerImage;
+            public Image playerPortraitImage;
             public GameObject enemyObject;
             public Image enemyImage;
             public Transform beamStartPoint;

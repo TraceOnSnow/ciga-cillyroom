@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using Spine.Unity;
@@ -12,6 +13,8 @@ namespace Subspace
         [SerializeField] private Rigidbody2D body;
         [SerializeField] private Animator animator;
         [SerializeField] private SubspaceSpineActorView spineView;
+
+        [SerializeField] private List<Image> mirrorImages = new List<Image>();
 
         [Header("Animator Replacement")]
         [SerializeField] private bool useAnimatorWhenAvailable = true;
@@ -53,6 +56,24 @@ namespace Subspace
                 body.bodyType = RigidbodyType2D.Kinematic;
                 body.simulated = false;
             }
+        }
+
+        public void AddMirrorImage(Image image)
+        {
+            if (image == null || image == uiImage || mirrorImages.Contains(image))
+            {
+                return;
+            }
+
+            image.preserveAspect = true;
+            image.raycastTarget = false;
+            if (uiImage != null)
+            {
+                image.sprite = uiImage.sprite;
+                image.color = uiImage.sprite != null ? Color.white : Color.clear;
+            }
+
+            mirrorImages.Add(image);
         }
 
         private void Awake()
@@ -217,7 +238,6 @@ namespace Subspace
                 {
                     PlayAnimatorState(standStateName);
                 }
-
                 yield break;
             }
 
@@ -305,6 +325,11 @@ namespace Subspace
             Color originalImageColor = uiImage != null ? uiImage.color : Color.white;
             Color originalSpriteColor = spriteRenderer != null ? spriteRenderer.color : Color.white;
             Color originalSpineColor = spineView != null ? spineView.GraphicColor : Color.white;
+            var originalMirrorColors = new List<Color>();
+            for (int i = 0; i < mirrorImages.Count; i++)
+            {
+                originalMirrorColors.Add(mirrorImages[i] != null ? mirrorImages[i].color : Color.white);
+            }
 
             float safeDuration = Mathf.Max(0.01f, duration);
             float elapsed = 0f;
@@ -320,6 +345,14 @@ namespace Subspace
                 if (uiImage != null)
                 {
                     uiImage.color = targetImageColor;
+                }
+
+                for (int i = 0; i < mirrorImages.Count; i++)
+                {
+                    if (mirrorImages[i] != null)
+                    {
+                        mirrorImages[i].color = Color.Lerp(originalMirrorColors[i], flashColor, pulse);
+                    }
                 }
 
                 if (spriteRenderer != null)
@@ -340,6 +373,14 @@ namespace Subspace
                 uiImage.color = originalImageColor;
             }
 
+            for (int i = 0; i < mirrorImages.Count; i++)
+            {
+                if (mirrorImages[i] != null)
+                {
+                    mirrorImages[i].color = originalMirrorColors[i];
+                }
+            }
+
             if (spriteRenderer != null)
             {
                 spriteRenderer.color = originalSpriteColor;
@@ -358,11 +399,14 @@ namespace Subspace
             if (uiImage != null)
             {
                 uiImage.sprite = sprite;
+                uiImage.preserveAspect = sprite != null;
                 if (applyFallbackColor)
                 {
                     uiImage.color = sprite != null ? Color.white : fallbackColor;
                 }
             }
+
+            ApplyMirrorSprite(sprite, fallbackColor);
 
             if (spriteRenderer != null)
             {
@@ -370,6 +414,25 @@ namespace Subspace
                 if (applyFallbackColor)
                 {
                     spriteRenderer.color = sprite != null ? Color.white : fallbackColor;
+                }
+            }
+        }
+
+        private void ApplyMirrorSprite(Sprite sprite, Color fallbackColor)
+        {
+            foreach (var image in mirrorImages)
+            {
+                if (image == null)
+                {
+                    continue;
+                }
+
+                image.sprite = sprite;
+                image.preserveAspect = sprite != null;
+                image.color = sprite != null ? Color.white : Color.clear;
+                if (applyFallbackColor)
+                {
+                    image.color = sprite != null ? Color.white : fallbackColor;
                 }
             }
         }

@@ -264,6 +264,13 @@ namespace Subspace
             enemy.SetColors(artSet.enemyColor, artSet.enemyColor, artSet.defeatedEnemyColor);
             enemy.SetAnimatorStateNames("Stand", "Attack", "Hit", "Defeated");
             enemy.ApplySpineLevel(currentLevel);
+            LowerEnemyPortraitForHpBar();
+            var playerPortrait = ui != null ? ui.EnsurePlayerPortraitImage() : null;
+            if (player != null && playerPortrait != null)
+            {
+                player.AddMirrorImage(playerPortrait);
+            }
+
             player.ShowIdle(GetPlayerIdle());
             enemy.ShowIdle(GetEnemyIdle());
 
@@ -279,6 +286,7 @@ namespace Subspace
             ApplyScannerShapeFromActiveUpgrades();
             ui.SetAttackEnabled(true);
             ui.Refresh(currentLevel, totalScore, remainingTurns, 0, null, activeUpgrades);
+            ui.SetDamageBreakdown(null);
         }
 
         private void Attack()
@@ -385,6 +393,7 @@ namespace Subspace
                 scansUsedThisTurn = 0;
             }
             ui.Refresh(currentLevel, totalScore, remainingTurns, result.total, result.lines, activeUpgrades);
+            ui.SetDamageBreakdown(result.sources);
             LogScoreSources(result, selection.CurrentSelection);
 
             yield return PlayPlayerAttackWithBeamAndEnemyHit();
@@ -562,7 +571,7 @@ namespace Subspace
         {
             Coroutine beamRoutine = StartCoroutine(PlayPlayerBeam());
             Coroutine enemyHitRoutine = enemy != null ? StartCoroutine(enemy.PlayHit(GetEnemyDefeated(), 0.25f)) : null;
-            yield return player.PlayAttack(GetPlayerAttack());
+            yield return player.PlayAttack(GetPlayerIdle());
 
             if (beamRoutine != null)
             {
@@ -909,6 +918,25 @@ namespace Subspace
             rewards.Hide();
             levelIndex++;
             ShowBriefing();
+        }
+
+        private void LowerEnemyPortraitForHpBar()
+        {
+            if (enemy == null)
+            {
+                return;
+            }
+
+            if (enemy.transform is RectTransform actorRect)
+            {
+                actorRect.anchoredPosition = new Vector2(actorRect.anchoredPosition.x, Mathf.Min(actorRect.anchoredPosition.y, 6f));
+            }
+
+            var spine = enemy.GetComponentInChildren<SubspaceSpineActorView>(true);
+            if (spine != null && spine.transform is RectTransform spineRect)
+            {
+                spineRect.anchoredPosition = new Vector2(spineRect.anchoredPosition.x, -42f);
+            }
         }
 
         private Sprite ResolveSymbolSprite(SubspaceSymbolDefinition symbol)
