@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: de1b746503a6e0246af489247b26ac46, type: 3}
+  m_Name: CillyRoomTextConfig
+  m_EditorClassIdentifier: 
+  briefingFallbackTitle: 任务简报
+  briefingContinueButtonText: 进入战斗
+  initialLevelText: 第一关
+  playerLabel: 我方
+  enemyLabel: 敌人
+  buffPanelTitle: 道具
+  playerAnimationPanelTitle: 人物动画
+  attackButtonText: 攻击
+  scoreFormat: "我方分数\n{0} / {1}"
+  targetFormat: 血量条（总共要达到的分数） {0}
+  turnFormat: "剩余回合数\n{0}"
+  roundScoreFormat: "本回合\n+{0}"
+  roundScoreEmptyText: "本回合\n-"
+  selectionHintText: 框选数字后点击攻击结算
+  campaignCompleteTitle: 原型通关
+  campaignCompleteBody: 两个示例关卡已经完成。你可以重新开始，或继续扩展关卡配置。
+  campaignCompleteButtonText: 重新开始
+  failureTitle: 任务失败
+  failureBodyFormat: 还差 {0} 分。重新部署这一关，再试一次。
+  failureButtonText: 重试本关
+  messageContinueButtonText: 继续
+  rewardTitleFormat: "{0} 胜利奖励"
+  rewardFallbackTitle: 胜利奖励
+  rewardSkipButtonText: 跳过奖励
+  rewardScoreFormat: 加入符号 {0}
