@@ -10,7 +10,17 @@ namespace Subspace
         ResourceScoreBoost,
         FirstScanDouble,
         PollutionReduction,
-        ExtraScan
+        ExtraScan,
+        SignalStabilization,
+        Overload,
+        LimitScan,
+        PreserveOutside,
+        TimeRewind,
+        EnergySurvey,
+        CleanerRobot,
+        ChaosConversion,
+        DamageControl,
+        LastStand
     }
 
     [CreateAssetMenu(menuName = "Subspace/Upgrade", fileName = "SubspaceUpgrade")]

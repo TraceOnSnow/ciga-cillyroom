@@ -400,10 +400,7 @@ namespace Subspace
             {
                 uiImage.sprite = sprite;
                 uiImage.preserveAspect = sprite != null;
-                if (applyFallbackColor)
-                {
-                    uiImage.color = sprite != null ? Color.white : fallbackColor;
-                }
+                uiImage.color = sprite != null ? Color.white : fallbackColor;
             }
 
             ApplyMirrorSprite(sprite, fallbackColor);
@@ -411,10 +408,7 @@ namespace Subspace
             if (spriteRenderer != null)
             {
                 spriteRenderer.sprite = sprite;
-                if (applyFallbackColor)
-                {
-                    spriteRenderer.color = sprite != null ? Color.white : fallbackColor;
-                }
+                spriteRenderer.color = sprite != null ? Color.white : fallbackColor;
             }
         }
 
@@ -429,11 +423,7 @@ namespace Subspace
 
                 image.sprite = sprite;
                 image.preserveAspect = sprite != null;
-                image.color = sprite != null ? Color.white : Color.clear;
-                if (applyFallbackColor)
-                {
-                    image.color = sprite != null ? Color.white : fallbackColor;
-                }
+                image.color = sprite != null ? Color.white : fallbackColor;
             }
         }
 

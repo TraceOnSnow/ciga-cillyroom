@@ -101,6 +101,45 @@ namespace Subspace
         public readonly List<SubspaceTileBuffInstance> buffs = new List<SubspaceTileBuffInstance>();
         public readonly List<SubspaceTileBuffInstance> debuffs = new List<SubspaceTileBuffInstance>();
         public readonly Dictionary<SubspaceSymbolKind, float> symbolWeightModifiers = new Dictionary<SubspaceSymbolKind, float>();
+        public bool blocksTileEffects;
+        public bool realityAnchor;
+        public bool signalBoostPoint;
+        public bool doubleExcitation;
+        public bool growthNode;
+        public bool realityLink;
+        public bool spaceTurbulence;
+        public bool energyElement;
+        public bool signalSacrifice;
+        public bool dataFlow;
+        public bool cosmicPrism;
+        public bool stableField;
+        public bool hotCore;
+        public bool magneticField;
+        public bool chaosField;
+        public bool signalConversion;
+        public bool signalEnhancer;
+        public bool chaosStance;
+        public int chaosFieldCounter;
+
+        public bool HasPersistentEffect =>
+            blocksTileEffects
+            || realityAnchor
+            || signalBoostPoint
+            || doubleExcitation
+            || growthNode
+            || realityLink
+            || spaceTurbulence
+            || energyElement
+            || signalSacrifice
+            || dataFlow
+            || cosmicPrism
+            || stableField
+            || hotCore
+            || magneticField
+            || chaosField
+            || signalConversion
+            || signalEnhancer
+            || chaosStance;
 
         public SubspaceTileData(int x, int y, SubspaceSymbolDefinition currentSymbol)
         {
@@ -279,6 +318,7 @@ namespace Subspace
             builder.AppendLine(Text.ColumnSuffix);
             builder.Append(Text.BaseBonus);
             builder.AppendLine(FormatSigned(tile.baseBonusScore));
+            AppendPersistentEffects(builder, tile);
             AppendBuffList(builder, "Buff", tile.buffs);
             AppendBuffList(builder, "Debuff", tile.debuffs);
             builder.Append(Text.CurrentSymbol);
@@ -355,6 +395,47 @@ namespace Subspace
             }
         }
 
+        private static void AppendPersistentEffects(StringBuilder builder, SubspaceTileData tile)
+        {
+            builder.Append(Text.PersistentEffects);
+            builder.AppendLine(Text.Colon);
+            if (tile == null || !tile.HasPersistentEffect)
+            {
+                builder.AppendLine(Text.NoneListItem);
+                return;
+            }
+
+            AppendEffect(builder, tile.realityAnchor, Text.EffectRealityAnchor);
+            AppendEffect(builder, tile.signalBoostPoint, Text.EffectSignalBoostPoint);
+            AppendEffect(builder, tile.doubleExcitation, Text.EffectDoubleExcitation);
+            AppendEffect(builder, tile.growthNode, Text.EffectGrowthNode);
+            AppendEffect(builder, tile.realityLink, Text.EffectRealityLink);
+            AppendEffect(builder, tile.spaceTurbulence, Text.EffectSpaceTurbulence);
+            AppendEffect(builder, tile.energyElement, Text.EffectEnergyElement);
+            AppendEffect(builder, tile.signalSacrifice, Text.EffectSignalSacrifice);
+            AppendEffect(builder, tile.dataFlow, Text.EffectDataFlow);
+            AppendEffect(builder, tile.cosmicPrism, Text.EffectCosmicPrism);
+            AppendEffect(builder, tile.stableField, Text.EffectStableField);
+            AppendEffect(builder, tile.hotCore, Text.EffectHotCore);
+            AppendEffect(builder, tile.magneticField, Text.EffectMagneticField);
+            AppendEffect(builder, tile.chaosField, Text.EffectChaosField);
+            AppendEffect(builder, tile.signalConversion, Text.EffectSignalConversion);
+            AppendEffect(builder, tile.signalEnhancer, Text.EffectSignalEnhancer);
+            AppendEffect(builder, tile.chaosStance, Text.EffectChaosStance);
+            AppendEffect(builder, tile.blocksTileEffects, Text.EffectBlockingSignal);
+        }
+
+        private static void AppendEffect(StringBuilder builder, bool active, string label)
+        {
+            if (!active)
+            {
+                return;
+            }
+
+            builder.Append("- ");
+            builder.AppendLine(label);
+        }
+
         internal static class Text
         {
             public const string None = "\u65e0";
@@ -392,6 +473,25 @@ namespace Subspace
             public const string BaseBonus = "\u57fa\u7840\u52a0\u6210\uff1a";
             public const string CurrentSymbol = "\u5f53\u524d\u7b26\u53f7\uff1a";
             public const string ExpectedScore = "\u9884\u8ba1\u672c\u683c\u5f97\u5206\uff1a";
+            public const string PersistentEffects = "\u5730\u5757\u6548\u679c";
+            public const string EffectRealityAnchor = "\u73b0\u5b9e\u951a\u70b9\uff1a\u5143\u7d20\u5206 +5";
+            public const string EffectSignalBoostPoint = "\u4fe1\u53f7\u52a0\u5f3a\u70b9\uff1a\u4fe1\u53f7\u8282\u70b9 x2";
+            public const string EffectDoubleExcitation = "\u53cc\u91cd\u6fc0\u53d1\uff1a\u5143\u7d20\u6fc0\u53d1 2 \u6b21";
+            public const string EffectGrowthNode = "\u6210\u957f\u8282\u70b9\uff1a\u6bcf\u6b21\u7ed3\u7b97\u5730\u5757 +2";
+            public const string EffectRealityLink = "\u73b0\u5b9e\u94fe\u63a5\uff1a\u4fe1\u53f7\u8282\u70b9 x0.5-3";
+            public const string EffectSpaceTurbulence = "\u7a7a\u95f4\u4e71\u6d41\uff1a\u6bcf\u56de\u5408 -1\uff0c\u7ed3\u7b97 x2";
+            public const string EffectEnergyElement = "\u80fd\u91cf\u5143\u7d20\uff1a\u672c\u683c\u8fbe 5 \u5206\u65f6\u56de\u5408 +1";
+            public const string EffectSignalSacrifice = "\u4fe1\u53f7\u732e\u796d\uff1a\u4e0a\u4e0b\u5de6\u53f3 x2\uff0c\u4e2d\u5fc3 /8";
+            public const string EffectDataFlow = "\u6570\u636e\u6d41\uff1a20% \u8f6c\u6362\u6570\u636e";
+            public const string EffectCosmicPrism = "\u5b87\u5b99\u68f1\u955c\uff1a\u590d\u5236\u5de6\u4fa7\u5206\u6570";
+            public const string EffectStableField = "\u7a33\u5b9a\u573a\uff1a\u514d\u75ab\u6c61\u67d3\u548c\u8870\u51cf";
+            public const string EffectHotCore = "\u708e\u70ed\u6838\u5fc3\uff1a\u541e\u6389\u6700\u4f4e\u5206\u5143\u7d20\u6210\u957f";
+            public const string EffectMagneticField = "\u78c1\u573a\uff1a\u5438\u5f15\u76f8\u90bb\u5143\u7d20";
+            public const string EffectChaosField = "\u6df7\u4e71\u573a\uff1a\u6bcf 3 \u6b21\u751f\u6210\u6df7\u4e71\u4fe1\u53f7";
+            public const string EffectSignalConversion = "\u4fe1\u53f7\u8f6c\u6362\uff1a\u8f6c\u6362\u4e00\u4e2a\u5143\u7d20\u4e3a\u4fe1\u53f7";
+            public const string EffectSignalEnhancer = "\u4fe1\u53f7\u52a0\u5f3a\u5668\uff1a\u4fe1\u53f7\u5143\u7d20 +5";
+            public const string EffectChaosStance = "\u6df7\u4e71\u7acb\u573a\uff1a\u6df7\u4e71\u4fe1\u53f7 x3";
+            public const string EffectBlockingSignal = "\u963b\u585e\u4fe1\u53f7\uff1a\u5730\u5757\u4e0d\u518d\u83b7\u5f97\u65b0\u6548\u679c";
             public const string BuffTooltip = "\u7c7b\u578b\uff1a{0}\n\u6548\u679c\uff1a{1}\n\u6765\u6e90\uff1a{2}\n\u5c42\u6570\uff1a{3}";
             public const string Colon = "\uff1a";
             public const string NoneListItem = "- \u65e0";

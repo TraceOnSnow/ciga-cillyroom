@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   upgradeId: damage_control
   displayName: "\u5373\u65F6\u6B62\u635F"
-  description: "Debuff \u6548\u679C\u51CF\u534A\u3002"
-  type: 4
+  description: "\u5730\u5757\u4E0A\u7684 defull/Debuff \u6548\u679C\u51CF\u534A\u3002"
+  type: 14
   shapeOffsets: []
   floatParam: 0.5
   intParam: 0

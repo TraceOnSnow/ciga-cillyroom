@@ -10,12 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 76b63b9057b9430988e4c13e6d555b8a, type: 3}
-  m_Name: Overload
+  m_Name: Last_Stand
   m_EditorClassIdentifier: 
-  upgradeId: overload
-  displayName: "\u8FC7\u8F7D"
-  description: "\u5F53\u7ED3\u7B97\u5206\u6570 >30 \u65F6\uFF0C\u5206\u6570 +10%\u3002"
-  type: 7
+  upgradeId: last_stand
+  displayName: "\u5B64\u6CE8\u4E00\u63B7"
+  description: "\u5269\u4F59 1 \u56DE\u5408\u65F6\uFF0C\u6700\u540E\u4E00\u6B21\u7ED3\u7B97 +2 \u500D\u3002"
+  type: 15
   shapeOffsets: []
-  floatParam: 0.1
+  floatParam: 2
   intParam: 0

@@ -103,13 +103,21 @@ namespace Subspace
            RefreshAll();
        }
 
-       public void RerollOutside(RectInt protectedSelection)
+       public void RerollOutside(RectInt protectedSelection, int preserveOutsideCount = 0, bool skipReroll = false)
         {
+            if (skipReroll)
+            {
+                RefreshAll();
+                return;
+            }
+
+            var preserved = PickPreservedOutsidePositions(protectedSelection, preserveOutsideCount);
             for (int y = 0; y < rows; y++)
             {
                 for (int x = 0; x < columns; x++)
                 {
-                    if (protectedSelection.Contains(new Vector2Int(x, y)))
+                    var position = new Vector2Int(x, y);
+                    if (protectedSelection.Contains(position) || preserved.Contains(position))
                     {
                         continue;
                     }
@@ -140,7 +148,8 @@ namespace Subspace
                 for (int x = 0; x < columns; x++)
                 {
                     int index = y * columns + x;
-                    var symbol = board[x, y];
+                    var symbol = tiles[x, y] != null ? tiles[x, y].currentSymbol : board[x, y];
+                    board[x, y] = symbol;
                     cells[index].SetTile(tiles[x, y], spriteResolver != null ? spriteResolver(symbol) : symbol != null ? symbol.artwork : null);
                 }
             }
@@ -229,6 +238,38 @@ namespace Subspace
             }
 
             return symbolPool[random.Next(0, symbolPool.Count)];
+        }
+
+        private HashSet<Vector2Int> PickPreservedOutsidePositions(RectInt protectedSelection, int count)
+        {
+            var result = new HashSet<Vector2Int>();
+            if (count <= 0)
+            {
+                return result;
+            }
+
+            var candidates = new List<Vector2Int>();
+            for (int y = 0; y < rows; y++)
+            {
+                for (int x = 0; x < columns; x++)
+                {
+                    var position = new Vector2Int(x, y);
+                    if (!protectedSelection.Contains(position))
+                    {
+                        candidates.Add(position);
+                    }
+                }
+            }
+
+            int safeCount = Mathf.Min(count, candidates.Count);
+            for (int i = 0; i < safeCount; i++)
+            {
+                int index = random.Next(i, candidates.Count);
+                (candidates[i], candidates[index]) = (candidates[index], candidates[i]);
+                result.Add(candidates[i]);
+            }
+
+            return result;
         }
 
         private void SetCurrentSymbol(int x, int y, SubspaceSymbolDefinition symbol, bool createTileIfMissing)

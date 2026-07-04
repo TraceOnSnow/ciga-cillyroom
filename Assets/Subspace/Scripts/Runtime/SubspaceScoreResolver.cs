@@ -48,6 +48,20 @@ namespace Subspace
        private const float AnchorEffectBoostFallback = 0.5f;
        private const float PollutionReductionFallback = 0.5f;
 
+       private sealed class TileScoreEntry
+       {
+           public SubspaceTileData tile;
+           public SubspaceSymbolDefinition symbol;
+           public Vector2Int position;
+           public string displayName;
+           public int originalScore;
+           public int baseScore;
+           public int multiplier = 1;
+           public readonly List<string> details = new List<string>();
+
+           public int FinalScore => baseScore * multiplier;
+       }
+
        public static SubspaceScoreResult Calculate(SubspaceTileData[,] tiles, SubspaceSelectionShape shape, SubspaceScoreContext context, System.Random random = null)
        {
            var lines = new List<string>();
@@ -59,7 +73,7 @@ namespace Subspace
 
            int columns = tiles.GetLength(0);
            int rows = tiles.GetLength(1);
-           int total = 0;
+           var entries = new List<TileScoreEntry>();
            var selectedSymbols = new List<SubspaceSymbolDefinition>();
 
            foreach (var position in shape.Cells)
@@ -75,56 +89,757 @@ namespace Subspace
                    continue;
                }
 
-                var symbolDefinition = tile.currentSymbol;
-                var symbol = SubspaceTileRulebook.GetSymbolData(symbolDefinition);
-                int baseInstantScore = SubspaceElementRules.GetInstantScore(symbolDefinition);
-                if (symbolDefinition.SafeKind == SubspaceSymbolKind.ChaosSignal)
-                {
-                    baseInstantScore = random != null ? random.Next(-10, 31) : Random.Range(-10, 31);
-                }
+               ApplySignalStabilization(tile, context);
+               var symbolDefinition = tile.currentSymbol;
+               if (symbolDefinition == null)
+               {
+                   continue;
+               }
 
-                int instantScore = ApplyResourceScoreBoost(symbolDefinition, baseInstantScore, context, out var resourceBoostDetail);
+               var symbol = SubspaceTileRulebook.GetSymbolData(symbolDefinition);
+               int baseInstantScore = GetRolledInstantScore(symbolDefinition, random);
+               int instantScore = ApplyResourceScoreBoost(symbolDefinition, baseInstantScore, context, out var resourceBoostDetail);
                int tileModifier = GetScoreModifier(tile, context, out var pollutionReductionDetail);
                int tileEffectScore = ApplyAnchorEffectBoost(tile.baseBonusScore + tileModifier, context, out var anchorBoostDetail);
-               int finalScore = instantScore + tileEffectScore;
-               total += finalScore;
-               selectedSymbols.Add(symbolDefinition);
+               int baseScore = instantScore + tileEffectScore;
 
-               string detail = $"即时 {symbol.instantScore}, 地块 {SubspaceTileRulebook.FormatSigned(tile.baseBonusScore)}, 状态 {SubspaceTileRulebook.FormatSigned(tileModifier)}";
+               if (tile.realityAnchor)
+               {
+                   baseScore += 5;
+               }
+
+               var entry = new TileScoreEntry
+               {
+                   tile = tile,
+                   symbol = symbolDefinition,
+                   position = position,
+                   displayName = symbol.displayName,
+                   originalScore = baseInstantScore,
+                   baseScore = baseScore
+               };
+
+               entry.details.Add($"即时 {baseInstantScore}, 地块 {SubspaceTileRulebook.FormatSigned(tile.baseBonusScore)}, 状态 {SubspaceTileRulebook.FormatSigned(tileModifier)}");
+               if (tile.realityAnchor)
+               {
+                   entry.details.Add("现实锚点 +5");
+               }
+
                if (!string.IsNullOrEmpty(resourceBoostDetail))
                {
-                   detail += $"; {resourceBoostDetail}";
+                   entry.details.Add(resourceBoostDetail);
                }
 
                if (!string.IsNullOrEmpty(anchorBoostDetail))
                {
-                   detail += $"; {anchorBoostDetail}";
+                   entry.details.Add(anchorBoostDetail);
                }
 
                if (!string.IsNullOrEmpty(pollutionReductionDetail))
                {
-                   detail += $"; {pollutionReductionDetail}";
+                   entry.details.Add(pollutionReductionDetail);
                }
 
-               lines.Add($"{symbol.displayName}: {finalScore}");
-               sources.Add(new SubspaceScoreSource(
-                   symbol.displayName,
-                   position,
-                   baseInstantScore,
-                   finalScore,
-                   1,
-                   finalScore,
-                   detail));
-
-              SubspaceElementRules.ApplyTileEffects(symbolDefinition, tile);
+               ApplyPersistentTileScoreEffects(entry, entries, random);
+               entries.Add(entry);
+               selectedSymbols.Add(symbolDefinition);
           }
 
-           ApplyElementTableBonuses(selectedSymbols, lines, sources, ref total);
-           ApplyElementSynergyBonuses(selectedSymbols, lines, sources, ref total);
-          ApplySynergyBonuses(tiles, shape, context, total, lines, sources, ref total);
-          ApplyFirstScanDouble(context, lines, sources, ref total);
+           ApplySelectionWideTileEffects(entries, random);
 
-          return new SubspaceScoreResult(total, 0, lines, sources);
+           int total = 0;
+           int turnDelta = 0;
+           foreach (var entry in entries)
+           {
+               int finalScore = entry.FinalScore;
+               total += finalScore;
+               if (entry.tile.energyElement && finalScore >= 5)
+               {
+                   turnDelta += 1;
+                   entry.details.Add("能量元素：回合 +1");
+               }
+
+               lines.Add($"{entry.displayName}: {finalScore}");
+               sources.Add(new SubspaceScoreSource(
+                   entry.displayName,
+                   entry.position,
+                   entry.originalScore,
+                   entry.baseScore,
+                   entry.multiplier,
+                   finalScore,
+                   string.Join("; ", entry.details)));
+           }
+
+           ApplyElementTableBonuses(entries, selectedSymbols, context, lines, sources, ref total);
+           ApplyElementSynergyBonuses(selectedSymbols, lines, sources, ref total);
+           ApplyRewardUpgradeBonuses(entries, selectedSymbols, context, lines, sources, random, ref total);
+           ApplySynergyBonuses(tiles, shape, context, total, lines, sources, ref total);
+           ApplyFirstScanDouble(context, lines, sources, ref total);
+
+           foreach (var entry in entries)
+           {
+               int times = entry.tile.doubleExcitation ? 2 : 1;
+               if (entry.symbol.SafeKind == SubspaceSymbolKind.DoubleExcitation)
+               {
+                   times = Mathf.Max(times, 2);
+               }
+
+               for (int i = 0; i < times; i++)
+               {
+                   ApplyTileEffects(entry.symbol, entry.tile, entries, context, random);
+               }
+           }
+
+          return new SubspaceScoreResult(total, turnDelta, lines, sources);
+     }
+
+     private static int GetRolledInstantScore(SubspaceSymbolDefinition symbol, System.Random random)
+     {
+         if (symbol == null)
+         {
+             return 0;
+         }
+
+         if (symbol.SafeKind == SubspaceSymbolKind.ChaosSignal)
+         {
+             return random != null ? random.Next(-10, 31) : Random.Range(-10, 31);
+         }
+
+         return SubspaceElementRules.GetInstantScore(symbol);
+     }
+
+     private static void ApplySignalStabilization(SubspaceTileData tile, SubspaceScoreContext context)
+     {
+         if (tile == null || tile.currentSymbol == null || !context.HasUpgrade(SubspaceUpgradeType.SignalStabilization))
+         {
+             return;
+         }
+
+         var kind = tile.currentSymbol.SafeKind;
+         if (kind != SubspaceSymbolKind.ChaosSignal && kind != SubspaceSymbolKind.VoidSignal)
+         {
+             return;
+         }
+
+         var signal = context.FindSymbol(SubspaceSymbolKind.SignalNode);
+         if (signal != null)
+         {
+             tile.currentSymbol = signal;
+         }
+     }
+
+     private static void ApplyPersistentTileScoreEffects(TileScoreEntry entry, IReadOnlyList<TileScoreEntry> previousEntries, System.Random random)
+     {
+         if (entry == null || entry.tile == null || entry.symbol == null)
+         {
+             return;
+         }
+
+         if (entry.tile.signalBoostPoint && entry.symbol.SafeKind == SubspaceSymbolKind.SignalNode)
+         {
+             entry.multiplier *= 2;
+             entry.details.Add("信号加强点 x2");
+         }
+
+         if (entry.tile.realityLink && entry.symbol.SafeKind == SubspaceSymbolKind.SignalNode)
+         {
+             int roll = random != null ? random.Next(1, 7) : Random.Range(1, 7);
+             float multiplier = roll * 0.5f;
+             int before = entry.baseScore;
+             entry.baseScore = Mathf.RoundToInt(entry.baseScore * multiplier);
+             entry.details.Add($"现实链接 x{multiplier:0.0}: {before} -> {entry.baseScore}");
+         }
+
+         if (entry.tile.spaceTurbulence)
+         {
+             entry.multiplier *= 2;
+             entry.details.Add("空间乱流 x2");
+         }
+
+         if (entry.tile.cosmicPrism || entry.symbol.SafeKind == SubspaceSymbolKind.Prism || entry.symbol.SafeKind == SubspaceSymbolKind.CosmicPrism)
+         {
+             var left = FindEntry(previousEntries, entry.position + Vector2Int.left);
+             if (left != null)
+             {
+                 int copied = left.FinalScore;
+                 entry.baseScore += copied;
+                 entry.details.Add($"棱镜复制左侧 +{copied}");
+             }
+         }
+     }
+
+     private static void ApplySelectionWideTileEffects(IReadOnlyList<TileScoreEntry> entries, System.Random random)
+     {
+         bool hasChaosStance = false;
+         int signalEnhancerCount = 0;
+         int signalNodeCount = 0;
+
+         for (int i = 0; i < entries.Count; i++)
+         {
+             var entry = entries[i];
+             if (entry.tile.chaosStance || entry.symbol.SafeKind == SubspaceSymbolKind.ChaosStance)
+             {
+                 hasChaosStance = true;
+             }
+
+             if (entry.tile.signalEnhancer || entry.symbol.SafeKind == SubspaceSymbolKind.SignalEnhancer)
+             {
+                 signalEnhancerCount++;
+             }
+
+             if (entry.symbol.SafeKind == SubspaceSymbolKind.SignalNode)
+             {
+                 signalNodeCount++;
+             }
+         }
+
+         for (int i = 0; i < entries.Count; i++)
+         {
+             var entry = entries[i];
+             if (hasChaosStance && entry.symbol.SafeKind == SubspaceSymbolKind.ChaosSignal)
+             {
+                 entry.multiplier *= 3;
+                 entry.details.Add("混乱立场 x3");
+             }
+
+             if (entry.symbol.SafeKind == SubspaceSymbolKind.GravityFlow && signalNodeCount > 0)
+             {
+                 int bonus = signalNodeCount * 10;
+                 entry.baseScore += bonus;
+                 entry.details.Add($"引力流吸收信号 +{bonus}");
+             }
+         }
+
+         if (signalEnhancerCount > 0)
+         {
+             int signalNameCount = 0;
+             for (int i = 0; i < entries.Count; i++)
+             {
+                 if (IsSignalName(entries[i].displayName))
+                 {
+                     signalNameCount++;
+                 }
+             }
+
+             int bonus = signalNameCount * signalEnhancerCount * 5;
+             for (int i = 0; i < entries.Count; i++)
+             {
+                 if (IsSignalName(entries[i].displayName))
+                 {
+                     entries[i].baseScore += signalEnhancerCount * 5;
+                     entries[i].details.Add($"信号加强器 +{signalEnhancerCount * 5}");
+                 }
+             }
+         }
+
+         for (int i = 0; i < entries.Count; i++)
+         {
+             var center = entries[i];
+             if (!center.tile.signalSacrifice && center.symbol.SafeKind != SubspaceSymbolKind.SignalSacrifice)
+             {
+                 continue;
+             }
+
+             int before = center.baseScore;
+             center.baseScore = Mathf.RoundToInt(center.baseScore / 8f);
+             center.details.Add($"信号献祭中心 /8: {before} -> {center.baseScore}");
+
+             for (int j = 0; j < entries.Count; j++)
+             {
+                 if (i == j)
+                 {
+                     continue;
+                 }
+
+                 var adjacent = entries[j];
+                 int distance = Mathf.Abs(adjacent.position.x - center.position.x) + Mathf.Abs(adjacent.position.y - center.position.y);
+                 if (distance == 1)
+                 {
+                     adjacent.multiplier *= 2;
+                     adjacent.details.Add("信号献祭相邻 x2");
+                 }
+             }
+         }
+     }
+
+     private static void ApplyElementTableBonuses(
+         IReadOnlyList<TileScoreEntry> entries,
+         IReadOnlyList<SubspaceSymbolDefinition> selectedSymbols,
+         SubspaceScoreContext context,
+         List<string> lines,
+         List<SubspaceScoreSource> sources,
+         ref int total)
+     {
+         if (selectedSymbols == null || selectedSymbols.Count == 0)
+         {
+             return;
+         }
+
+         int dataCount = 0;
+         int energyShardCount = 0;
+         int analysisCount = 0;
+         int resonanceCount = 0;
+         int energyTransitionCount = 0;
+         var kindCounts = new Dictionary<SubspaceSymbolKind, int>();
+
+         for (int i = 0; i < selectedSymbols.Count; i++)
+         {
+             var symbol = selectedSymbols[i];
+             if (symbol == null)
+             {
+                 continue;
+             }
+
+             kindCounts.TryGetValue(symbol.SafeKind, out var count);
+             kindCounts[symbol.SafeKind] = count + 1;
+
+             switch (symbol.SafeKind)
+             {
+                 case SubspaceSymbolKind.Data:
+                     dataCount++;
+                     break;
+                 case SubspaceSymbolKind.EnergyShard:
+                     energyShardCount++;
+                     break;
+                 case SubspaceSymbolKind.MultidimensionalAnalysis:
+                     analysisCount++;
+                     break;
+                 case SubspaceSymbolKind.ResonanceSignal:
+                     resonanceCount++;
+                     break;
+                 case SubspaceSymbolKind.EnergyTransition:
+                     energyTransitionCount++;
+                     break;
+             }
+         }
+
+         if (dataCount > 1)
+         {
+             AddBonus("数据", dataCount * dataCount * 2, lines, sources, ref total, "框中数据数量越多，数据额外加分越高。");
+         }
+
+         if (energyShardCount > 0)
+         {
+             AddBonus("能量碎片", energyShardCount * selectedSymbols.Count * 5, lines, sources, ref total, "给予框内所有元素 +5 分。");
+         }
+
+         if (analysisCount > 0)
+         {
+             AddBonus("多维分析", analysisCount * kindCounts.Count * 3, lines, sources, ref total, "框中每有一个不同元素，+3。");
+         }
+
+         if (energyTransitionCount > 0)
+         {
+             int tileBonus = 0;
+             for (int i = 0; i < entries.Count; i++)
+             {
+                 if (entries[i].tile != null)
+                 {
+                     tileBonus += Mathf.Max(0, entries[i].tile.baseBonusScore + SubspaceTileRulebook.GetScoreModifier(entries[i].tile));
+                 }
+             }
+
+             AddBonus("能量跃迁", tileBonus * energyTransitionCount, lines, sources, ref total, "获得框中所有地块的正向加成。");
+         }
+
+         if (resonanceCount > 0)
+         {
+             foreach (var entry in kindCounts)
+             {
+                 if (entry.Value * 2 >= selectedSymbols.Count)
+                 {
+                     AddBonus("共振信号", resonanceCount * 20, lines, sources, ref total, "框中至少 50% 为同一元素。");
+                     break;
+                 }
+             }
+         }
+     }
+
+     private static void ApplyRewardUpgradeBonuses(
+         IReadOnlyList<TileScoreEntry> entries,
+         IReadOnlyList<SubspaceSymbolDefinition> selectedSymbols,
+         SubspaceScoreContext context,
+         List<string> lines,
+         List<SubspaceScoreSource> sources,
+         System.Random random,
+         ref int total)
+     {
+         if (context.HasUpgrade(SubspaceUpgradeType.ChaosConversion))
+         {
+             int debuffCount = 0;
+             for (int i = 0; i < entries.Count; i++)
+             {
+                 debuffCount += entries[i].tile != null ? entries[i].tile.debuffs.Count : 0;
+             }
+
+             AddBonus("混沌转化", debuffCount * 5, lines, sources, ref total, "地块上每有一个 defull/debuff，结算 +5。");
+         }
+
+         if (context.HasUpgrade(SubspaceUpgradeType.LimitScan) && selectedSymbols != null && selectedSymbols.Count > 0)
+         {
+             var kinds = new HashSet<SubspaceSymbolKind>();
+             for (int i = 0; i < selectedSymbols.Count; i++)
+             {
+                 if (selectedSymbols[i] != null)
+                 {
+                     kinds.Add(selectedSymbols[i].SafeKind);
+                 }
+             }
+
+             int before = total;
+             if (kinds.Count == 1)
+             {
+                 total *= 2;
+             }
+             else if (kinds.Count == 2)
+             {
+                 total += 10;
+             }
+             else if (kinds.Count > 3)
+             {
+                 total -= 20;
+             }
+
+             if (total != before)
+             {
+                 int delta = total - before;
+                 lines.Add($"极限扫描: {SubspaceTileRulebook.FormatSigned(delta)}");
+                 sources.Add(new SubspaceScoreSource("极限扫描", BonusScoreKey, delta, delta, 1, delta, $"元素种类 {kinds.Count}。"));
+             }
+         }
+
+         if (total > 30 && context.HasUpgrade(SubspaceUpgradeType.Overload))
+         {
+             int bonus = Mathf.RoundToInt(total * 0.1f);
+             AddBonus("过载", bonus, lines, sources, ref total, "结算分数 >30，分数 +10%。");
+         }
+
+         if (context.HasUpgrade(SubspaceUpgradeType.LastStand) && context.remainingTurns <= 1)
+         {
+             int bonus = total;
+             AddBonus("孤注一掷", bonus, lines, sources, ref total, "剩余 1 回合时，最后一次结算 +2 倍。");
+         }
+
+         if (context.HasUpgrade(SubspaceUpgradeType.CleanerRobot))
+         {
+             int roll = random != null ? random.Next(0, 100) : Random.Range(0, 100);
+             if (roll < 30 && ClearRandomDebuff(entries, random))
+             {
+                 lines.Add("清洁机器人: 清除 1 个 defull");
+             }
+         }
+     }
+
+     private static void ApplyTileEffects(
+         SubspaceSymbolDefinition definition,
+         SubspaceTileData tile,
+         IReadOnlyList<TileScoreEntry> selectedEntries,
+         SubspaceScoreContext context,
+         System.Random random)
+     {
+         if (definition == null || tile == null)
+         {
+             return;
+         }
+
+         bool canAddTileEffect = !tile.blocksTileEffects;
+         switch (definition.SafeKind)
+         {
+             case SubspaceSymbolKind.RealityAnchor:
+                 if (canAddTileEffect) tile.realityAnchor = true;
+                 break;
+             case SubspaceSymbolKind.SignalBoostPoint:
+                 if (canAddTileEffect) tile.signalBoostPoint = true;
+                 break;
+             case SubspaceSymbolKind.DoubleExcitation:
+                 if (canAddTileEffect) tile.doubleExcitation = true;
+                 break;
+             case SubspaceSymbolKind.GrowthNode:
+                 if (canAddTileEffect) tile.growthNode = true;
+                 break;
+             case SubspaceSymbolKind.RealityLink:
+                 if (canAddTileEffect) tile.realityLink = true;
+                 break;
+             case SubspaceSymbolKind.SpaceTurbulenceField:
+                 if (canAddTileEffect) tile.spaceTurbulence = true;
+                 break;
+             case SubspaceSymbolKind.EnergyElement:
+                 if (canAddTileEffect) tile.energyElement = true;
+                 break;
+             case SubspaceSymbolKind.SignalSacrifice:
+                 if (canAddTileEffect) tile.signalSacrifice = true;
+                 break;
+             case SubspaceSymbolKind.DataFlow:
+                 if (canAddTileEffect)
+                 {
+                     tile.dataFlow = true;
+                     TryConvertRandomSelectedSymbol(selectedEntries, context, SubspaceSymbolKind.Data, 20, random);
+                 }
+                 break;
+             case SubspaceSymbolKind.CosmicPrism:
+                 if (canAddTileEffect) tile.cosmicPrism = true;
+                 break;
+             case SubspaceSymbolKind.StableField:
+                 if (canAddTileEffect) tile.stableField = true;
+                 tile.debuffs.Clear();
+                 break;
+             case SubspaceSymbolKind.HotCore:
+                 if (canAddTileEffect)
+                 {
+                     tile.hotCore = true;
+                     ConsumeLowestBaseSymbolIntoTile(tile, selectedEntries);
+                 }
+                 break;
+             case SubspaceSymbolKind.MagneticField:
+                 if (canAddTileEffect)
+                 {
+                     tile.magneticField = true;
+                     PullAdjacentSymbol(tile, context, random);
+                 }
+                 break;
+             case SubspaceSymbolKind.ChaosField:
+                 if (canAddTileEffect)
+                 {
+                     tile.chaosField = true;
+                     tile.chaosFieldCounter++;
+                     if (tile.chaosFieldCounter >= 3)
+                     {
+                         tile.chaosFieldCounter = 0;
+                         SpawnChaosSignals(selectedEntries, context, random);
+                     }
+                 }
+                 break;
+             case SubspaceSymbolKind.SignalConversion:
+                 if (canAddTileEffect)
+                 {
+                     tile.signalConversion = true;
+                     TryConvertRandomSelectedSymbol(selectedEntries, context, SubspaceSymbolKind.SignalNode, 100, random);
+                 }
+                 break;
+             case SubspaceSymbolKind.SignalEnhancer:
+                 if (canAddTileEffect) tile.signalEnhancer = true;
+                 break;
+             case SubspaceSymbolKind.ChaosStance:
+                 if (canAddTileEffect) tile.chaosStance = true;
+                 break;
+             case SubspaceSymbolKind.BlockingSignal:
+                 tile.blocksTileEffects = true;
+                 break;
+             case SubspaceSymbolKind.TornSpace:
+                 DestroyRandomTileBonus(selectedEntries, random);
+                 break;
+             case SubspaceSymbolKind.Overclock:
+                 if (!tile.stableField)
+                 {
+                     tile.baseBonusScore = Mathf.FloorToInt(tile.baseBonusScore * 0.5f);
+                 }
+                 break;
+             case SubspaceSymbolKind.VoidSignal:
+                 ConsumeRandomAdjacentSymbol(tile, context, random);
+                 break;
+         }
+
+         if (tile.growthNode)
+         {
+             tile.baseBonusScore += 2;
+         }
+
+         if (tile.spaceTurbulence && !tile.stableField)
+         {
+             tile.baseBonusScore -= 1;
+         }
+     }
+
+     private static TileScoreEntry FindEntry(IReadOnlyList<TileScoreEntry> entries, Vector2Int position)
+     {
+         if (entries == null)
+         {
+             return null;
+         }
+
+         for (int i = 0; i < entries.Count; i++)
+         {
+             if (entries[i] != null && entries[i].position == position)
+             {
+                 return entries[i];
+             }
+         }
+
+         return null;
+     }
+
+     private static bool IsSignalName(string displayName)
+     {
+         return !string.IsNullOrEmpty(displayName) && displayName.Contains("信号");
+     }
+
+     private static bool ClearRandomDebuff(IReadOnlyList<TileScoreEntry> entries, System.Random random)
+     {
+         var candidates = new List<SubspaceTileData>();
+         for (int i = 0; i < entries.Count; i++)
+         {
+             if (entries[i].tile != null && entries[i].tile.debuffs.Count > 0)
+             {
+                 candidates.Add(entries[i].tile);
+             }
+         }
+
+         if (candidates.Count == 0)
+         {
+             return false;
+         }
+
+         var tile = candidates[random != null ? random.Next(0, candidates.Count) : Random.Range(0, candidates.Count)];
+         tile.debuffs.RemoveAt(0);
+         return true;
+     }
+
+     private static void TryConvertRandomSelectedSymbol(
+         IReadOnlyList<TileScoreEntry> entries,
+         SubspaceScoreContext context,
+         SubspaceSymbolKind targetKind,
+         int chancePercent,
+         System.Random random)
+     {
+         int roll = random != null ? random.Next(0, 100) : Random.Range(0, 100);
+         if (roll >= chancePercent)
+         {
+             return;
+         }
+
+         var target = context.FindSymbol(targetKind);
+         if (target == null)
+         {
+             return;
+         }
+
+         var candidates = new List<TileScoreEntry>();
+         for (int i = 0; i < entries.Count; i++)
+         {
+             if (entries[i].tile != null && entries[i].symbol != null && entries[i].symbol.SafeKind != targetKind)
+             {
+                 candidates.Add(entries[i]);
+             }
+         }
+
+         if (candidates.Count == 0)
+         {
+             return;
+         }
+
+         var chosen = candidates[random != null ? random.Next(0, candidates.Count) : Random.Range(0, candidates.Count)];
+         chosen.tile.currentSymbol = target;
+     }
+
+     private static void ConsumeLowestBaseSymbolIntoTile(SubspaceTileData targetTile, IReadOnlyList<TileScoreEntry> entries)
+     {
+         TileScoreEntry lowest = null;
+         for (int i = 0; i < entries.Count; i++)
+         {
+             var entry = entries[i];
+             if (entry == null || entry.tile == null || entry.symbol == null || entry.tile == targetTile)
+             {
+                 continue;
+             }
+
+             if (lowest == null || SubspaceElementRules.GetInstantScore(entry.symbol) < SubspaceElementRules.GetInstantScore(lowest.symbol))
+             {
+                 lowest = entry;
+             }
+         }
+
+         if (lowest == null)
+         {
+             return;
+         }
+
+         targetTile.baseBonusScore += Mathf.Max(0, SubspaceElementRules.GetInstantScore(lowest.symbol));
+         lowest.tile.currentSymbol = null;
+     }
+
+     private static void PullAdjacentSymbol(SubspaceTileData tile, SubspaceScoreContext context, System.Random random)
+     {
+         var candidates = new List<SubspaceTileData>();
+         AddAdjacentCandidate(candidates, context.GetAdjacent(tile, 1, 0));
+         AddAdjacentCandidate(candidates, context.GetAdjacent(tile, -1, 0));
+         AddAdjacentCandidate(candidates, context.GetAdjacent(tile, 0, 1));
+         AddAdjacentCandidate(candidates, context.GetAdjacent(tile, 0, -1));
+         if (candidates.Count == 0)
+         {
+             return;
+         }
+
+         var source = candidates[random != null ? random.Next(0, candidates.Count) : Random.Range(0, candidates.Count)];
+         tile.currentSymbol = source.currentSymbol;
+         source.currentSymbol = null;
+     }
+
+     private static void AddAdjacentCandidate(List<SubspaceTileData> candidates, SubspaceTileData tile)
+     {
+         if (tile != null && tile.currentSymbol != null)
+         {
+             candidates.Add(tile);
+         }
+     }
+
+     private static void SpawnChaosSignals(IReadOnlyList<TileScoreEntry> entries, SubspaceScoreContext context, System.Random random)
+     {
+         var chaos = context.FindSymbol(SubspaceSymbolKind.ChaosSignal);
+         if (chaos == null || entries.Count == 0)
+         {
+             return;
+         }
+
+         var shuffled = new List<TileScoreEntry>(entries);
+         for (int i = 0; i < shuffled.Count; i++)
+         {
+             int j = random != null ? random.Next(i, shuffled.Count) : Random.Range(i, shuffled.Count);
+             (shuffled[i], shuffled[j]) = (shuffled[j], shuffled[i]);
+         }
+
+         int count = Mathf.Min(3, shuffled.Count);
+         for (int i = 0; i < count; i++)
+         {
+             if (shuffled[i].tile != null)
+             {
+                 shuffled[i].tile.currentSymbol = chaos;
+             }
+         }
+     }
+
+     private static void DestroyRandomTileBonus(IReadOnlyList<TileScoreEntry> entries, System.Random random)
+     {
+         var candidates = new List<SubspaceTileData>();
+         for (int i = 0; i < entries.Count; i++)
+         {
+             if (entries[i].tile != null && entries[i].tile.baseBonusScore > 0)
+             {
+                 candidates.Add(entries[i].tile);
+             }
+         }
+
+         if (candidates.Count == 0)
+         {
+             return;
+         }
+
+         var target = candidates[random != null ? random.Next(0, candidates.Count) : Random.Range(0, candidates.Count)];
+         target.baseBonusScore = 0;
+     }
+
+     private static void ConsumeRandomAdjacentSymbol(SubspaceTileData tile, SubspaceScoreContext context, System.Random random)
+     {
+         var candidates = new List<SubspaceTileData>();
+         AddAdjacentCandidate(candidates, context.GetAdjacent(tile, 1, 0));
+         AddAdjacentCandidate(candidates, context.GetAdjacent(tile, -1, 0));
+         AddAdjacentCandidate(candidates, context.GetAdjacent(tile, 0, 1));
+         AddAdjacentCandidate(candidates, context.GetAdjacent(tile, 0, -1));
+         if (candidates.Count == 0)
+         {
+             return;
+         }
+
+         var target = candidates[random != null ? random.Next(0, candidates.Count) : Random.Range(0, candidates.Count)];
+         target.currentSymbol = null;
      }
 
      private static int ApplyResourceScoreBoost(SubspaceSymbolDefinition symbol, int score, SubspaceScoreContext context, out string detail)
@@ -180,10 +895,12 @@ namespace Subspace
              debuffScore += debuff.ScoreModifier;
          }
 
-         if (debuffScore != 0 && context.HasUpgrade(SubspaceUpgradeType.PollutionReduction))
+         if (debuffScore != 0 && (context.HasUpgrade(SubspaceUpgradeType.PollutionReduction) || context.HasUpgrade(SubspaceUpgradeType.DamageControl)))
          {
              int originalDebuffScore = debuffScore;
-             float reduction = context.GetUpgradeFloat(SubspaceUpgradeType.PollutionReduction, PollutionReductionFallback);
+             float reduction = context.HasUpgrade(SubspaceUpgradeType.DamageControl)
+                 ? context.GetUpgradeFloat(SubspaceUpgradeType.DamageControl, PollutionReductionFallback)
+                 : context.GetUpgradeFloat(SubspaceUpgradeType.PollutionReduction, PollutionReductionFallback);
              debuffScore = Mathf.RoundToInt(debuffScore * Mathf.Clamp01(1f - reduction));
              detail = $"PollutionReduction {reduction:P0}: debuff {originalDebuffScore} -> {debuffScore}";
          }

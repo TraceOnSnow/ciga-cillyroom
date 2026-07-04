@@ -117,20 +117,26 @@ namespace Subspace
         public readonly int rows;
         public readonly IReadOnlyList<string> playerUpgrades;
         public readonly IReadOnlyList<SubspaceUpgradeDefinition> upgradeDefinitions;
+        public readonly IReadOnlyList<SubspaceSymbolDefinition> symbolPool;
         public readonly bool isFirstScanThisLevel;
+        public readonly int remainingTurns;
 
         public SubspaceScoreContext(
             SubspaceTileData[,] boardTiles,
             IReadOnlyList<string> upgrades = null,
             IReadOnlyList<SubspaceUpgradeDefinition> definitions = null,
-            bool firstScanThisLevel = false)
+            bool firstScanThisLevel = false,
+            IReadOnlyList<SubspaceSymbolDefinition> symbols = null,
+            int turnsLeft = 0)
         {
             tiles = boardTiles;
             columns = boardTiles != null ? boardTiles.GetLength(0) : 0;
             rows = boardTiles != null ? boardTiles.GetLength(1) : 0;
             playerUpgrades = upgrades ?? new List<string>();
             upgradeDefinitions = definitions ?? new List<SubspaceUpgradeDefinition>();
+            symbolPool = symbols ?? new List<SubspaceSymbolDefinition>();
             isFirstScanThisLevel = firstScanThisLevel;
+            remainingTurns = turnsLeft;
         }
 
         public SubspaceTileData GetTile(int x, int y)
@@ -169,6 +175,25 @@ namespace Subspace
             }
 
             return false;
+        }
+
+        public SubspaceSymbolDefinition FindSymbol(SubspaceSymbolKind kind)
+        {
+            if (symbolPool == null)
+            {
+                return null;
+            }
+
+            for (int i = 0; i < symbolPool.Count; i++)
+            {
+                var symbol = symbolPool[i];
+                if (symbol != null && symbol.SafeKind == kind)
+                {
+                    return symbol;
+                }
+            }
+
+            return null;
         }
 
         public bool HasUpgrade(SubspaceUpgradeType type)

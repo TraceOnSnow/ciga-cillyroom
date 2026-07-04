@@ -10,12 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 76b63b9057b9430988e4c13e6d555b8a, type: 3}
-  m_Name: Overload
+  m_Name: Limit_Scan
   m_EditorClassIdentifier: 
-  upgradeId: overload
-  displayName: "\u8FC7\u8F7D"
-  description: "\u5F53\u7ED3\u7B97\u5206\u6570 >30 \u65F6\uFF0C\u5206\u6570 +10%\u3002"
-  type: 7
+  upgradeId: limit_scan
+  displayName: "\u6781\u9650\u626B\u63CF"
+  description: "1 \u79CD\u5143\u7D20\u65F6\u5206\u6570 *2\uFF1B2 \u79CD\u65F6 +10\uFF1B3 \u79CD\u65E0\u6548\u679C\uFF1B\u5927\u4E8E 3 \u79CD\u65F6 -20\u3002"
+  type: 8
   shapeOffsets: []
-  floatParam: 0.1
+  floatParam: 0
   intParam: 0

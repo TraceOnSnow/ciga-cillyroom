@@ -74,6 +74,7 @@ namespace Subspace
         private int remainingTurns;
         private int scansUsedThisTurn;
         private bool hasScannedThisLevel;
+        private bool timeRewindAvailable;
         private bool busy;
 
         public void Configure(
@@ -258,6 +259,7 @@ namespace Subspace
             remainingTurns = currentLevel.SafeTurns;
             scansUsedThisTurn = 0;
             hasScannedThisLevel = false;
+            timeRewindAvailable = HasActiveUpgrade(SubspaceUpgradeType.TimeRewind);
             busy = false;
 
             player.SetColors(artSet.playerColor, artSet.playerAttackColor, artSet.playerColor);
@@ -362,7 +364,7 @@ namespace Subspace
             busy = true;
             ui.SetAttackEnabled(false);
 
-            var context = new SubspaceScoreContext(board.Tiles, GetActiveUpgradeIds(), activeUpgrades, !hasScannedThisLevel);
+            var context = new SubspaceScoreContext(board.Tiles, GetActiveUpgradeIds(), activeUpgrades, !hasScannedThisLevel, symbolPool, remainingTurns);
             var result = SubspaceScoreResolver.Calculate(board.Tiles, selection.CurrentShape, context, random);
             hasScannedThisLevel = true;
             scansUsedThisTurn++;
@@ -419,8 +421,23 @@ namespace Subspace
             List<string> monsterLines = null;
             if (turnComplete)
             {
-                board.RerollOutside(selection.CurrentSelection);
-                monsterLines = ApplyMonsterPressure();
+                bool skipReroll = timeRewindAvailable && HasActiveUpgrade(SubspaceUpgradeType.TimeRewind);
+                if (skipReroll)
+                {
+                    timeRewindAvailable = false;
+                    monsterLines = new List<string> { "\u65f6\u95f4\u56de\u6eaf: \u672c\u56de\u5408\u5143\u7d20\u4fdd\u6301\u4e0d\u53d8" };
+                }
+
+                board.RerollOutside(selection.CurrentSelection, GetPreserveOutsideCount(), skipReroll);
+                var pressureLines = ApplyMonsterPressure();
+                if (monsterLines == null)
+                {
+                    monsterLines = pressureLines;
+                }
+                else if (pressureLines != null)
+                {
+                    monsterLines.AddRange(pressureLines);
+                }
                 board.RefreshAll();
             }
 
@@ -474,6 +491,12 @@ namespace Subspace
                     continue;
                 }
 
+                if (tile.stableField)
+                {
+                    lines.Add($"{currentLevel.monsterDisplayName}: stable field blocked pollution");
+                    continue;
+                }
+
                 SubspaceElementRules.AddStack(tile.debuffs, SubspaceTileBuffType.SpacePollution, currentLevel.monsterDisplayName);
                 lines.Add($"{currentLevel.monsterDisplayName}: pollution +1");
             }
@@ -484,6 +507,12 @@ namespace Subspace
             var strongest = GetStrongestTile();
             if (strongest == null)
             {
+                return;
+            }
+
+            if (strongest.stableField)
+            {
+                lines.Add($"{currentLevel.monsterDisplayName}: stable field protected strongest tile");
                 return;
             }
 
@@ -498,6 +527,11 @@ namespace Subspace
             {
                 var tile = GetRandomTile();
                 if (tile == null)
+                {
+                    continue;
+                }
+
+                if (tile.stableField)
                 {
                     continue;
                 }
@@ -518,6 +552,11 @@ namespace Subspace
                 {
                     var tile = tiles[x, y];
                     if (tile == null || tile.baseBonusScore <= 0)
+                    {
+                        continue;
+                    }
+
+                    if (tile.stableField)
                     {
                         continue;
                     }
@@ -800,9 +839,9 @@ namespace Subspace
        {
            if (upgrade != null)
            {
-               activeUpgrades.Add(upgrade);
-               ApplyUpgradeEffect(upgrade);
-               ui.RefreshUpgrades(activeUpgrades);
+                activeUpgrades.Add(upgrade);
+                ApplyUpgradeEffect(upgrade);
+                ui.RefreshUpgrades(activeUpgrades);
            }
 
            SkipReward();
@@ -833,6 +872,32 @@ namespace Subspace
            }
 
            return 1;
+       }
+
+       private bool HasActiveUpgrade(SubspaceUpgradeType type)
+       {
+           foreach (var upgrade in activeUpgrades)
+           {
+               if (upgrade != null && upgrade.type == type)
+               {
+                   return true;
+               }
+           }
+
+           return false;
+       }
+
+       private int GetPreserveOutsideCount()
+       {
+           foreach (var upgrade in activeUpgrades)
+           {
+               if (upgrade != null && upgrade.type == SubspaceUpgradeType.PreserveOutside)
+               {
+                   return Mathf.Max(4, upgrade.intParam > 0 ? upgrade.intParam : 4);
+               }
+           }
+
+           return 0;
        }
 
        private void ApplyScannerShapeFromActiveUpgrades()
@@ -907,10 +972,33 @@ namespace Subspace
                        selection.ApplyCustomShape(new System.Collections.Generic.List<Vector2Int>(upgrade.shapeOffsets));
                    }
                    break;
+               case SubspaceUpgradeType.EnergySurvey:
+                   AddEnergySurveySymbols();
+                   break;
                default:
                    Debug.Log($"[Subspace] Upgrade active: {upgrade.displayName} ({upgrade.type})");
                    break;
            }
+       }
+
+       private void AddEnergySurveySymbols()
+       {
+           var additions = new List<SubspaceSymbolDefinition>();
+           foreach (var symbol in symbolPool)
+           {
+               if (symbol == null)
+               {
+                   continue;
+               }
+
+               if (symbol.SafeKind == SubspaceSymbolKind.EnergyShard || symbol.SafeKind == SubspaceSymbolKind.EnergyElement)
+               {
+                   additions.Add(symbol);
+                   additions.Add(symbol);
+               }
+           }
+
+           symbolPool.AddRange(additions);
        }
 
         private void SkipReward()

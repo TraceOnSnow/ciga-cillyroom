@@ -121,12 +121,7 @@ namespace Subspace
 
             if (scoreText != null)
             {
-                if (lastRoundScore != 0 || lastDamageSources.Count == 0)
-                {
-                    scoreText.text = lastRoundScore != 0 ? $"\u4e0a\u6b21\u4f24\u5bb3\n{lastRoundScore}" : "\u4e0a\u6b21\u4f24\u5bb3\n-";
-                }
-
-                EnsureDamageTooltipTarget();
+                scoreText.text = BuildEnemyAbilityText(level);
             }
 
             if (targetText != null)
@@ -141,7 +136,8 @@ namespace Subspace
 
             if (roundScoreText != null)
             {
-                roundScoreText.text = lastRoundScore > 0 ? TextConfig.FormatRoundScore(lastRoundScore) : TextConfig.roundScoreEmptyText;
+                roundScoreText.text = lastRoundScore != 0 ? $"\u4e0a\u6b21\u4f24\u5bb3\n{lastRoundScore}" : "\u4e0a\u6b21\u4f24\u5bb3\n-";
+                EnsureDamageTooltipTarget();
             }
 
             if (detailText != null)
@@ -177,9 +173,9 @@ namespace Subspace
                 damageTooltipTarget.SetTooltip("\u4e0a\u6b21\u4f24\u5bb3\u8d21\u732e", BuildDamageTooltip());
             }
 
-            if (scoreText != null && lastDamageSources.Count == 0)
+            if (roundScoreText != null && lastDamageSources.Count == 0)
             {
-                scoreText.text = "\u4e0a\u6b21\u4f24\u5bb3\n-";
+                roundScoreText.text = "\u4e0a\u6b21\u4f24\u5bb3\n-";
             }
         }
 
@@ -314,20 +310,20 @@ namespace Subspace
 
         private void EnsureDamageTooltipTarget()
         {
-            if (scoreText == null)
+            if (roundScoreText == null)
             {
                 return;
             }
 
-            scoreText.raycastTarget = true;
-            if (damageTooltipTarget == null)
+            roundScoreText.raycastTarget = true;
+            if (damageTooltipTarget == null || damageTooltipTarget.transform != roundScoreText.transform)
             {
-                damageTooltipTarget = scoreText.GetComponent<SubspaceDamageTooltipTarget>();
+                damageTooltipTarget = roundScoreText.GetComponent<SubspaceDamageTooltipTarget>();
             }
 
             if (damageTooltipTarget == null)
             {
-                damageTooltipTarget = scoreText.gameObject.AddComponent<SubspaceDamageTooltipTarget>();
+                damageTooltipTarget = roundScoreText.gameObject.AddComponent<SubspaceDamageTooltipTarget>();
             }
 
             damageTooltipTarget.SetTooltip("\u4e0a\u6b21\u4f24\u5bb3\u8d21\u732e", BuildDamageTooltip());
@@ -336,6 +332,9 @@ namespace Subspace
         private void SetHpFill(float targetFill)
         {
             targetFill = Mathf.Clamp01(targetFill);
+            hpFill.type = Image.Type.Filled;
+            hpFill.fillMethod = Image.FillMethod.Horizontal;
+            hpFill.fillOrigin = (int)Image.OriginHorizontal.Left;
             if (!gameObject.activeInHierarchy)
             {
                 hpFill.fillAmount = targetFill;
@@ -386,6 +385,36 @@ namespace Subspace
             }
 
             return string.Join("\n", lines);
+        }
+
+        private static string BuildEnemyAbilityText(SubspaceLevelDefinition level)
+        {
+            if (level == null)
+            {
+                return "\u654c\u4eba\u80fd\u529b\n-";
+            }
+
+            string ability;
+            switch (level.monsterPressureType)
+            {
+                case SubspaceMonsterPressureType.ErodeStrongestTile:
+                    ability = $"\u541e\u566c\u6700\u5f3a\u5730\u5757 x{Mathf.Max(1, level.monsterPressureAmount)}";
+                    break;
+                case SubspaceMonsterPressureType.JamScanner:
+                    ability = $"\u5e72\u6270\u626b\u63cf x{Mathf.Max(1, level.monsterPressureAmount)}";
+                    break;
+                case SubspaceMonsterPressureType.CollapseAnchors:
+                    ability = $"\u524a\u5f31\u951a\u7f51 x{Mathf.Max(1, level.monsterPressureAmount)}";
+                    break;
+                case SubspaceMonsterPressureType.SpreadPollution:
+                    ability = $"\u6269\u6563\u6c61\u67d3 x{Mathf.Max(1, level.monsterPressureAmount)}";
+                    break;
+                default:
+                    ability = "\u65e0";
+                    break;
+            }
+
+            return $"\u654c\u4eba\u80fd\u529b\n{level.monsterDisplayName}\n{ability}";
         }
 
         private void EnsureUpgradeTextLayout()
