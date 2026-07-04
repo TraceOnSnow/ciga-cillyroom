@@ -23,6 +23,15 @@ MonoBehaviour:
   selectionHeight: 3
   briefingBackgroundOverride: {fileID: 0}
   enemySpriteOverride: {fileID: 0}
+  enemySpineSkeleton: {fileID: 11400000, guid: d28cde51f237d284d8ac6714aa0429ca, type: 2}
+  enemySpineMaterial: {fileID: 2100000, guid: cf6139000cec6ff4fbb93b59a929c571, type: 2}
+  enemySpineIdleAnimation: stand
+  enemySpineAttackAnimation: attack
+  enemySpineHitAnimation: stand
+  enemySpineDefeatedAnimation: stand
+  enemySpineAnchoredPosition: {x: 0, y: -24}
+  enemySpineSize: {x: 220, y: 150}
+  enemySpineScale: {x: 1, y: 1, z: 1}
   rewardChoices:
   - {fileID: 11400000, guid: 58c17d9780c74196a44e6ec4863943c9, type: 2}
   - {fileID: 11400000, guid: 97f7ca6028734e73b74fbdacfbff9864, type: 2}

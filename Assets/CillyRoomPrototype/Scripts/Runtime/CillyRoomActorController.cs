@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using Spine.Unity;
 
 namespace CillyRoomPrototype
 {
@@ -10,10 +11,12 @@ namespace CillyRoomPrototype
         [SerializeField] private SpriteRenderer spriteRenderer;
         [SerializeField] private Rigidbody2D body;
         [SerializeField] private Animator animator;
+        [SerializeField] private CillyRoomSpineActorView spineView;
 
         [Header("Animator Replacement")]
         [SerializeField] private bool useAnimatorWhenAvailable = true;
         [SerializeField] private string idleStateName = "Idle";
+        [SerializeField] private string standStateName = "Stand";
         [SerializeField] private string attackTriggerName = "Attack";
         [SerializeField] private string attackStateName = "Attack";
         [SerializeField] private string hitTriggerName = "Hit";
@@ -30,17 +33,20 @@ namespace CillyRoomPrototype
         [SerializeField] private Color idleColor = Color.white;
         [SerializeField] private Color actionColor = Color.white;
         [SerializeField] private Color defeatedColor = Color.gray;
+        [SerializeField] private Color hitFlashColor = new Color(1f, 0.08f, 0.04f, 1f);
 
         private Vector3 baseScale;
         private Coroutine animationRoutine;
+        private Coroutine flashRoutine;
         private Sprite idleSprite;
 
-        public void Configure(Image image, SpriteRenderer renderer, Rigidbody2D rigidbody2D, Animator actorAnimator = null)
+        public void Configure(Image image, SpriteRenderer renderer, Rigidbody2D rigidbody2D, Animator actorAnimator = null, CillyRoomSpineActorView actorSpineView = null)
         {
             uiImage = image;
             spriteRenderer = renderer;
             body = rigidbody2D;
             animator = actorAnimator;
+            spineView = actorSpineView;
 
             if (body != null)
             {
@@ -66,6 +72,11 @@ namespace CillyRoomPrototype
             {
                 body = GetComponent<Rigidbody2D>();
             }
+
+            if (spineView == null)
+            {
+                spineView = GetComponentInChildren<CillyRoomSpineActorView>(true);
+            }
         }
 
         public void SetColors(Color idle, Color action, Color defeated)
@@ -75,13 +86,44 @@ namespace CillyRoomPrototype
             defeatedColor = defeated;
         }
 
+        public void SetAnimatorStateNames(string idleState, string attackState, string hitState, string defeatedState)
+        {
+            if (!string.IsNullOrWhiteSpace(idleState))
+            {
+                idleStateName = idleState;
+            }
+
+            if (!string.IsNullOrWhiteSpace(attackState))
+            {
+                attackStateName = attackState;
+            }
+
+            if (!string.IsNullOrWhiteSpace(hitState))
+            {
+                hitStateName = hitState;
+            }
+
+            if (!string.IsNullOrWhiteSpace(defeatedState))
+            {
+                defeatedStateName = defeatedState;
+            }
+        }
+
         public void ShowIdle(Sprite sprite)
         {
             StopAnimation();
             idleSprite = sprite;
             ApplySprite(sprite, idleColor);
             transform.localScale = baseScale;
-            PlayAnimatorState(idleStateName);
+            if (spineView != null && spineView.IsConfigured)
+            {
+                spineView.PlayIdle();
+            }
+
+            if (!PlayAnimatorState(idleStateName))
+            {
+                PlayAnimatorState(standStateName);
+            }
         }
 
         public void ShowDefeated(Sprite sprite)
@@ -89,16 +131,93 @@ namespace CillyRoomPrototype
             StopAnimation();
             ApplySprite(sprite, defeatedColor);
             transform.localScale = baseScale;
+            if (spineView != null && spineView.IsConfigured)
+            {
+                spineView.PlayDefeated();
+            }
+
             PlayAnimatorState(defeatedStateName);
+        }
+
+        public void ApplySpineLevel(CillyRoomLevelDefinition level)
+        {
+            if (level != null && level.enemySpineSkeleton != null)
+            {
+                EnsureSpineView();
+                spineView.ApplyLevel(level);
+                SetFallbackGraphicsVisible(false);
+            }
+            else
+            {
+                if (spineView != null)
+                {
+                    spineView.Clear();
+                }
+
+                SetFallbackGraphicsVisible(true);
+            }
+        }
+
+        private void EnsureSpineView()
+        {
+            if (spineView != null)
+            {
+                return;
+            }
+
+            var spineObject = new GameObject("Enemy Spine Graphic", typeof(RectTransform), typeof(CanvasRenderer), typeof(CillyRoomSpineActorView));
+            spineObject.transform.SetParent(transform, false);
+
+            var rect = spineObject.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            rect.pivot = new Vector2(0.5f, 0.5f);
+
+            var components = SkeletonGraphic.AddSkeletonGraphicAnimationComponents(spineObject, null, null, true);
+            var graphic = components.skeletonRenderer;
+            graphic.raycastTarget = false;
+
+            spineView = spineObject.GetComponent<CillyRoomSpineActorView>();
+            spineView.Configure(graphic, components.skeletonAnimation);
+        }
+
+        private void SetFallbackGraphicsVisible(bool visible)
+        {
+            var graphics = GetComponentsInChildren<Graphic>(true);
+            foreach (var graphic in graphics)
+            {
+                if (graphic.GetComponentInParent<CillyRoomSpineActorView>() != null)
+                {
+                    continue;
+                }
+
+                graphic.enabled = visible;
+            }
         }
 
         public IEnumerator PlayAttack(Sprite sprite, float duration = 0.45f)
         {
             StopAnimation();
+            if (spineView != null && spineView.IsConfigured)
+            {
+                spineView.PlayAttack();
+            }
+
             if (TryPlayAnimatorAction(attackTriggerName, attackStateName))
             {
                 yield return new WaitForSeconds(attackAnimationDuration > 0f ? attackAnimationDuration : duration);
-                PlayAnimatorState(idleStateName);
+                if (spineView != null && spineView.IsConfigured)
+                {
+                    spineView.PlayIdle();
+                }
+
+                if (!PlayAnimatorState(idleStateName))
+                {
+                    PlayAnimatorState(standStateName);
+                }
+
                 yield break;
             }
 
@@ -107,11 +226,21 @@ namespace CillyRoomPrototype
             animationRoutine = null;
             ApplySprite(idleSprite, idleColor);
             transform.localScale = baseScale;
+            if (spineView != null && spineView.IsConfigured)
+            {
+                spineView.PlayIdle();
+            }
         }
 
         public IEnumerator PlayHit(Sprite sprite, float duration = 0.45f)
         {
             StopAnimation();
+            StartFlash(hitFlashColor, duration);
+            if (spineView != null && spineView.IsConfigured)
+            {
+                spineView.PlayHit();
+            }
+
             if (TryPlayAnimatorAction(hitTriggerName, hitStateName))
             {
                 yield return new WaitForSeconds(hitAnimationDuration > 0f ? hitAnimationDuration : duration);
@@ -159,6 +288,69 @@ namespace CillyRoomPrototype
                 StopCoroutine(animationRoutine);
                 animationRoutine = null;
             }
+        }
+
+        private void StartFlash(Color flashColor, float duration)
+        {
+            if (flashRoutine != null)
+            {
+                StopCoroutine(flashRoutine);
+            }
+
+            flashRoutine = StartCoroutine(FlashColor(flashColor, duration));
+        }
+
+        private IEnumerator FlashColor(Color flashColor, float duration)
+        {
+            Color originalImageColor = uiImage != null ? uiImage.color : Color.white;
+            Color originalSpriteColor = spriteRenderer != null ? spriteRenderer.color : Color.white;
+            Color originalSpineColor = spineView != null ? spineView.GraphicColor : Color.white;
+
+            float safeDuration = Mathf.Max(0.01f, duration);
+            float elapsed = 0f;
+            while (elapsed < safeDuration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / safeDuration);
+                float pulse = Mathf.Sin(t * Mathf.PI * 6f) > 0f ? 1f : 0f;
+                Color targetImageColor = Color.Lerp(originalImageColor, flashColor, pulse);
+                Color targetSpriteColor = Color.Lerp(originalSpriteColor, flashColor, pulse);
+                Color targetSpineColor = Color.Lerp(originalSpineColor, flashColor, pulse);
+
+                if (uiImage != null)
+                {
+                    uiImage.color = targetImageColor;
+                }
+
+                if (spriteRenderer != null)
+                {
+                    spriteRenderer.color = targetSpriteColor;
+                }
+
+                if (spineView != null)
+                {
+                    spineView.GraphicColor = targetSpineColor;
+                }
+
+                yield return null;
+            }
+
+            if (uiImage != null)
+            {
+                uiImage.color = originalImageColor;
+            }
+
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.color = originalSpriteColor;
+            }
+
+            if (spineView != null)
+            {
+                spineView.GraphicColor = originalSpineColor;
+            }
+
+            flashRoutine = null;
         }
 
         private void ApplySprite(Sprite sprite, Color fallbackColor)

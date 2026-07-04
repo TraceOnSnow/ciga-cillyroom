@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Spine.Unity;
 
 namespace CillyRoomPrototype
 {
@@ -22,6 +23,17 @@ namespace CillyRoomPrototype
         [Header("Optional Art Overrides")]
         public Sprite briefingBackgroundOverride;
         public Sprite enemySpriteOverride;
+
+        [Header("Enemy Spine Override")]
+        public SkeletonDataAsset enemySpineSkeleton;
+        public Material enemySpineMaterial;
+        public string enemySpineIdleAnimation = "stand";
+        public string enemySpineAttackAnimation = "attack";
+        public string enemySpineHitAnimation = "stand";
+        public string enemySpineDefeatedAnimation = "stand";
+        public Vector2 enemySpineAnchoredPosition = new Vector2(0f, -24f);
+        public Vector2 enemySpineSize = new Vector2(220f, 150f);
+        public Vector3 enemySpineScale = Vector3.one;
 
         [Header("Reward Choices")]
         public List<CillyRoomSymbolDefinition> rewardChoices = new List<CillyRoomSymbolDefinition>();

@@ -6,6 +6,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using Spine.Unity;
 
 namespace CillyRoomPrototype.Editor
 {
@@ -18,6 +19,8 @@ namespace CillyRoomPrototype.Editor
         private const string SymbolsFolder = GeneratedFolder + "/Symbols";
         private const string LevelsFolder = GeneratedFolder + "/Levels";
         private const string AnimatorsFolder = GeneratedFolder + "/Animators";
+        private const string MonsterOneSkeletonPath = "Assets/Art/Monster/Monster_1/MONSTER1_SkeletonData.asset";
+        private const string MonsterOneMaterialPath = "Assets/Art/Monster/Monster_1/MONSTER1_Material.mat";
 
         [MenuItem("CillyRoom/原型生成器")]
         public static void Open()
@@ -75,6 +78,7 @@ namespace CillyRoomPrototype.Editor
                 scene.player,
                 scene.enemy,
                 scene.rewards);
+            scene.director.ConfigureBeamPlacement(scene.beamStartPoint, scene.beamEndPoint);
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -178,6 +182,7 @@ namespace CillyRoomPrototype.Editor
 
             var stateMachine = controller.layers[0].stateMachine;
             var idle = EnsureAnimatorState(stateMachine, "Idle", new Vector3(250f, 60f, 0f));
+            EnsureAnimatorState(stateMachine, "Stand", new Vector3(250f, -40f, 0f));
             EnsureAnimatorState(stateMachine, "Attack", new Vector3(520f, 0f, 0f));
             EnsureAnimatorState(stateMachine, "Hit", new Vector3(520f, 100f, 0f));
             EnsureAnimatorState(stateMachine, "Escape", new Vector3(520f, 200f, 0f));
@@ -296,8 +301,10 @@ namespace CillyRoomPrototype.Editor
 
             var enemy = game.enemyObject.AddComponent<CillyRoomActorController>();
             var enemyAnimator = game.enemyObject.AddComponent<Animator>();
+            var enemySpine = CreateEnemySpineView(game.enemyObject.transform);
             enemyAnimator.runtimeAnimatorController = enemyAnimatorController;
-            enemy.Configure(game.enemyImage, game.enemyObject.AddComponent<SpriteRenderer>(), game.enemyObject.AddComponent<Rigidbody2D>(), enemyAnimator);
+            enemy.Configure(game.enemyImage, game.enemyObject.AddComponent<SpriteRenderer>(), game.enemyObject.AddComponent<Rigidbody2D>(), enemyAnimator, enemySpine);
+            enemy.SetAnimatorStateNames("Stand", "Attack", "Hit", "Defeated");
 
             reward.controller.Configure(reward.root, reward.titleText, reward.cardsRoot, reward.skipButton, reward.optionPrefab);
             reward.controller.SetTextConfig(textConfig);
@@ -316,7 +323,9 @@ namespace CillyRoomPrototype.Editor
                 selection = selector,
                 player = player,
                 enemy = enemy,
-                rewards = reward.controller
+                rewards = reward.controller,
+                beamStartPoint = game.beamStartPoint,
+                beamEndPoint = game.beamEndPoint
             };
         }
 
@@ -361,6 +370,8 @@ namespace CillyRoomPrototype.Editor
 
             var playerObject = CreateCharacter(topPanel.transform, "Top Player Actor", 78f, 24f, 250f, 78f, Color.white, textConfig.playerLabel, out var playerImage);
             var enemyObject = CreateCharacter(topPanel.transform, "Enemy Actor", 915f, 24f, 250f, 78f, Color.white, textConfig.enemyLabel, out var enemyImage);
+            var beamStartPoint = CreateBeamPoint(playerObject.transform, "Player Beam Start Point", 96f, 38f);
+            var beamEndPoint = CreateBeamPoint(enemyObject.transform, "Enemy Beam Hit Point", 26f, 38f);
 
             var buffPanel = CreatePanel(root.transform, "Buff Item Panel", new Color(0.12f, 0.13f, 0.15f, 0.98f), true);
             SetLowerLeft(buffPanel.rectTransform, 20f, 286f, 210f, 234f);
@@ -387,7 +398,7 @@ namespace CillyRoomPrototype.Editor
             var selectorObject = CreatePanel(boardPanel.transform, "Selection Box", WithAlpha(artSet.selectorColor, 0.33333334f), false);
             selectorObject.raycastTarget = false;
             var selectorOutline = selectorObject.gameObject.AddComponent<Outline>();
-            selectorOutline.effectColor = artSet.selectorOutlineColor;
+            selectorOutline.effectColor = WithAlpha(artSet.selectorOutlineColor, 0.33333334f);
             selectorOutline.effectDistance = new Vector2(3f, -3f);
             selectorOutline.useGraphicAlpha = false;
             selectorObject.transform.SetAsLastSibling();
@@ -439,7 +450,9 @@ namespace CillyRoomPrototype.Editor
                 playerObject = playerObject,
                 playerImage = playerImage,
                 enemyObject = enemyObject,
-                enemyImage = enemyImage
+                enemyImage = enemyImage,
+                beamStartPoint = beamStartPoint,
+                beamEndPoint = beamEndPoint
             };
         }
 
@@ -505,6 +518,42 @@ namespace CillyRoomPrototype.Editor
             var text = CreateText(actor.transform, "Label", label, 22, Color.white, TextAnchor.MiddleCenter);
             Stretch(text.rectTransform);
             return actor.gameObject;
+        }
+
+        private static Transform CreateBeamPoint(Transform parent, string name, float x, float y)
+        {
+            var point = CreateChild(parent, name, typeof(RectTransform));
+            var rect = point.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.zero;
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = new Vector2(x, y);
+            rect.sizeDelta = new Vector2(12f, 12f);
+            return point.transform;
+        }
+
+        private static CillyRoomSpineActorView CreateEnemySpineView(Transform parent)
+        {
+            var spineObject = CreateChild(parent, "Enemy Spine Graphic", typeof(RectTransform), typeof(CanvasRenderer));
+            var rect = spineObject.GetComponent<RectTransform>();
+            Stretch(rect);
+            rect.anchoredPosition = new Vector2(0f, -24f);
+            rect.sizeDelta = new Vector2(220f, 150f);
+
+            var components = SkeletonGraphic.AddSkeletonGraphicAnimationComponents(spineObject, LoadMonsterOneSkeleton(), LoadMonsterOneMaterial(), true);
+            var graphic = components.skeletonRenderer;
+            graphic.raycastTarget = false;
+            graphic.skeletonDataAsset = LoadMonsterOneSkeleton();
+            var material = LoadMonsterOneMaterial();
+            if (material != null)
+            {
+                graphic.material = material;
+            }
+
+            var view = spineObject.AddComponent<CillyRoomSpineActorView>();
+            view.Configure(graphic, components.skeletonAnimation);
+            spineObject.SetActive(false);
+            return view;
         }
 
         private static CillyRoomSymbolCellView CreateSymbolCellPrefab(Transform parent, CillyRoomArtSet artSet)
@@ -707,10 +756,33 @@ namespace CillyRoomPrototype.Editor
             asset.selectionWidth = asset.selectionWidth < 3 ? 3 : asset.selectionWidth;
             asset.selectionHeight = asset.selectionHeight < 3 ? 3 : asset.selectionHeight;
 
+            if (id == "level_01")
+            {
+                asset.enemySpineSkeleton = asset.enemySpineSkeleton == null ? LoadMonsterOneSkeleton() : asset.enemySpineSkeleton;
+                asset.enemySpineMaterial = asset.enemySpineMaterial == null ? LoadMonsterOneMaterial() : asset.enemySpineMaterial;
+                asset.enemySpineIdleAnimation = string.IsNullOrWhiteSpace(asset.enemySpineIdleAnimation) ? "stand" : asset.enemySpineIdleAnimation;
+                asset.enemySpineAttackAnimation = string.IsNullOrWhiteSpace(asset.enemySpineAttackAnimation) ? "attack" : asset.enemySpineAttackAnimation;
+                asset.enemySpineHitAnimation = string.IsNullOrWhiteSpace(asset.enemySpineHitAnimation) ? asset.enemySpineIdleAnimation : asset.enemySpineHitAnimation;
+                asset.enemySpineDefeatedAnimation = string.IsNullOrWhiteSpace(asset.enemySpineDefeatedAnimation) ? asset.enemySpineIdleAnimation : asset.enemySpineDefeatedAnimation;
+                asset.enemySpineAnchoredPosition = asset.enemySpineAnchoredPosition == Vector2.zero ? new Vector2(0f, -24f) : asset.enemySpineAnchoredPosition;
+                asset.enemySpineSize = asset.enemySpineSize == Vector2.zero ? new Vector2(220f, 150f) : asset.enemySpineSize;
+                asset.enemySpineScale = asset.enemySpineScale == Vector3.zero ? Vector3.one : asset.enemySpineScale;
+            }
+
             asset.rewardChoices = new List<CillyRoomSymbolDefinition> { rewardA, rewardB, rewardC };
 
             EditorUtility.SetDirty(asset);
             return asset;
+        }
+
+        private static SkeletonDataAsset LoadMonsterOneSkeleton()
+        {
+            return AssetDatabase.LoadAssetAtPath<SkeletonDataAsset>(MonsterOneSkeletonPath);
+        }
+
+        private static Material LoadMonsterOneMaterial()
+        {
+            return AssetDatabase.LoadAssetAtPath<Material>(MonsterOneMaterialPath);
         }
 
         private static bool ContainsSameSymbols(IReadOnlyList<CillyRoomSymbolDefinition> currentSymbols, IReadOnlyList<CillyRoomSymbolDefinition> expectedSymbols, int expectedCount)
@@ -806,6 +878,8 @@ namespace CillyRoomPrototype.Editor
             public CillyRoomActorController player;
             public CillyRoomActorController enemy;
             public CillyRoomRewardController rewards;
+            public Transform beamStartPoint;
+            public Transform beamEndPoint;
         }
 
         private sealed class BriefingParts
@@ -835,6 +909,8 @@ namespace CillyRoomPrototype.Editor
             public Image playerImage;
             public GameObject enemyObject;
             public Image enemyImage;
+            public Transform beamStartPoint;
+            public Transform beamEndPoint;
         }
 
         private sealed class RewardParts

@@ -4,6 +4,8 @@ namespace CillyRoomPrototype
 {
     public sealed class CillyRoomSelectionController : MonoBehaviour
     {
+        private const float SelectorAlpha = 0.33333334f;
+
         [SerializeField] private RectTransform selectorRect;
         [SerializeField] private CillyRoomBoardController boardController;
 
@@ -130,6 +132,9 @@ namespace CillyRoomPrototype
             var outline = selectorRect.GetComponent<UnityEngine.UI.Outline>();
             if (outline != null)
             {
+                var color = outline.effectColor;
+                color.a = SelectorAlpha;
+                outline.effectColor = color;
                 outline.useGraphicAlpha = false;
             }
         }
