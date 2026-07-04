@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: Number_8
   m_EditorClassIdentifier: 
   symbolId: reality_singularity
-  displayName: 8
+  displayName: "\u73B0\u5B9E\u5947\u70B9"
+  kind: 8
   baseScore: 0
   tintColor: {r: 1, g: 0.72, b: 0.18, a: 1}
   artwork: {fileID: 0}

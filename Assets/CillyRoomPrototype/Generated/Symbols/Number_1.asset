@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: Number_1
   m_EditorClassIdentifier: 
   symbolId: beacon
-  displayName: 1
+  displayName: "\u4FE1\u6807"
+  kind: 1
   baseScore: 3
   tintColor: {r: 0.88, g: 0.88, b: 0.88, a: 1}
   artwork: {fileID: 0}

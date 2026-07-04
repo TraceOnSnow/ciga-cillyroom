@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: Number_3
   m_EditorClassIdentifier: 
   symbolId: anchor
-  displayName: 3
+  displayName: "\u951A\u70B9"
+  kind: 3
   baseScore: 5
   tintColor: {r: 0.44, g: 0.82, b: 0.36, a: 1}
   artwork: {fileID: 0}

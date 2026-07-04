@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: Number_2
   m_EditorClassIdentifier: 
   symbolId: life_signal
-  displayName: 2
+  displayName: "\u751F\u547D\u4FE1\u53F7"
+  kind: 2
   baseScore: 0
   tintColor: {r: 0.32, g: 0.66, b: 0.98, a: 1}
   artwork: {fileID: 0}

@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 
 namespace CillyRoomPrototype
@@ -150,6 +151,7 @@ namespace CillyRoomPrototype
             totalScore += result.total;
             remainingTurns = Mathf.Max(0, remainingTurns - 1 + result.turnDelta);
             ui.Refresh(currentLevel, totalScore, remainingTurns, result.total, result.lines);
+            LogScoreSources(result);
 
             yield return player.PlayAttack(GetPlayerAttack());
             yield return enemy.PlayHit(GetEnemyDefeated(), 0.25f);
@@ -205,6 +207,56 @@ namespace CillyRoomPrototype
         private Sprite ResolveSymbolSprite(CillyRoomSymbolDefinition symbol)
         {
             return artRig != null ? artRig.GetSymbolSprite(symbol) : symbol != null ? symbol.artwork : null;
+        }
+
+        private void LogScoreSources(CillyRoomScoreResult result)
+        {
+            var builder = new StringBuilder();
+            builder.Append("[CillyRoom Score] ");
+            builder.Append(currentLevel != null ? currentLevel.displayName : "Unknown Level");
+            builder.Append(" | Round Score: ");
+            builder.Append(result.total);
+            builder.Append(" | Total Score: ");
+            builder.Append(totalScore);
+            builder.Append(" | Remaining Turns: ");
+            builder.Append(remainingTurns);
+
+            if (result.sources == null || result.sources.Count == 0)
+            {
+                builder.AppendLine();
+                builder.Append("  No selected score sources.");
+                Debug.Log(builder.ToString());
+                return;
+            }
+
+            foreach (var source in result.sources)
+            {
+                builder.AppendLine();
+                builder.Append("  - ");
+                builder.Append(source.displayName);
+
+                if (source.position.x >= 0 && source.position.y >= 0)
+                {
+                    builder.Append(" @ (");
+                    builder.Append(source.position.x);
+                    builder.Append(", ");
+                    builder.Append(source.position.y);
+                    builder.Append(")");
+                }
+
+                builder.Append(": ");
+                builder.Append(source.finalScore);
+
+                if (source.multiplier != 1)
+                {
+                    builder.Append(" = ");
+                    builder.Append(source.baseScore);
+                    builder.Append(" x");
+                    builder.Append(source.multiplier);
+                }
+            }
+
+            Debug.Log(builder.ToString());
         }
 
         private Sprite GetBriefingBackground() => artRig != null ? artRig.GetBriefingBackground(currentLevel, artSet) : currentLevel.briefingBackgroundOverride != null ? currentLevel.briefingBackgroundOverride : artSet.briefingBackground;

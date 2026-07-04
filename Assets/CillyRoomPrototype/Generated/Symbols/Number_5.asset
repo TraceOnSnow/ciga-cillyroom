@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: Number_5
   m_EditorClassIdentifier: 
   symbolId: turbulence
-  displayName: 5
+  displayName: "\u4E71\u6D41"
+  kind: 5
   baseScore: -2
   tintColor: {r: 0.87, g: 0.44, b: 0.92, a: 1}
   artwork: {fileID: 0}

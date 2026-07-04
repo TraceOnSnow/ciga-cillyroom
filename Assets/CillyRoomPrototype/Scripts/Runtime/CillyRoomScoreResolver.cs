@@ -8,12 +8,32 @@ namespace CillyRoomPrototype
         public readonly int total;
         public readonly int turnDelta;
         public readonly List<string> lines;
+        public readonly List<CillyRoomScoreSource> sources;
 
-        public CillyRoomScoreResult(int total, int turnDelta, List<string> lines)
+        public CillyRoomScoreResult(int total, int turnDelta, List<string> lines, List<CillyRoomScoreSource> sources = null)
         {
             this.total = total;
             this.turnDelta = turnDelta;
             this.lines = lines;
+            this.sources = sources ?? new List<CillyRoomScoreSource>();
+        }
+    }
+
+    public readonly struct CillyRoomScoreSource
+    {
+        public readonly string displayName;
+        public readonly Vector2Int position;
+        public readonly int baseScore;
+        public readonly int multiplier;
+        public readonly int finalScore;
+
+        public CillyRoomScoreSource(string displayName, Vector2Int position, int baseScore, int multiplier, int finalScore)
+        {
+            this.displayName = displayName;
+            this.position = position;
+            this.baseScore = baseScore;
+            this.multiplier = multiplier;
+            this.finalScore = finalScore;
         }
     }
 
@@ -27,10 +47,11 @@ namespace CillyRoomPrototype
             var multipliers = new Dictionary<Vector2Int, int>();
             var positions = new List<Vector2Int>();
             var lines = new List<string>();
+            var sources = new List<CillyRoomScoreSource>();
 
             if (board == null)
             {
-                return new CillyRoomScoreResult(0, 0, lines);
+                return new CillyRoomScoreResult(0, 0, lines, sources);
             }
 
             int columns = board.GetLength(0);
@@ -38,6 +59,7 @@ namespace CillyRoomPrototype
             int lifeSignalCount = 0;
             int energyCoreCount = 0;
             int cosmicDustCount = 0;
+            bool hasSelectedAnchor = false;
 
             for (int y = selection.yMin; y < selection.yMax; y++)
             {
@@ -54,19 +76,22 @@ namespace CillyRoomPrototype
                     multipliers[position] = 1;
 
                     int score = symbol.SafeBaseScore;
-                    switch (symbol.SafeId)
+                    switch (symbol.SafeKind)
                     {
-                        case "life_signal":
+                        case CillyRoomSymbolKind.LifeSignal:
                             score = RollInclusive(random, 1, 6);
                             lifeSignalCount++;
                             break;
-                        case "reality_singularity":
+                        case CillyRoomSymbolKind.RealitySingularity:
                             score = RollInclusive(random, -2, 5);
                             break;
-                        case "energy_core":
+                        case CillyRoomSymbolKind.Anchor:
+                            hasSelectedAnchor = true;
+                            break;
+                        case CillyRoomSymbolKind.EnergyCore:
                             energyCoreCount++;
                             break;
-                        case "cosmic_dust":
+                        case CillyRoomSymbolKind.CosmicDust:
                             cosmicDustCount++;
                             break;
                     }
@@ -76,7 +101,7 @@ namespace CillyRoomPrototype
             }
 
             ApplyAnchorEffects(board, baseScores, positions, cosmicDustCount, lines);
-            ApplySubspaceRifts(board, baseScores, positions, lines);
+            ApplySubspaceRifts(board, baseScores, positions, hasSelectedAnchor, lines);
             ApplyRealitySingularities(board, baseScores, multipliers, positions, lines);
 
             int turnDelta = 0;
@@ -85,6 +110,7 @@ namespace CillyRoomPrototype
                 baseScores[BonusScoreKey] = 25;
                 multipliers[BonusScoreKey] = 1;
                 lines.Add("生命体检测: +25");
+                sources.Add(new CillyRoomScoreSource("生命体检测", BonusScoreKey, 25, 1, 25));
             }
 
             if (energyCoreCount >= 5)
@@ -108,9 +134,10 @@ namespace CillyRoomPrototype
                 var symbol = board[entry.Key.x, entry.Key.y];
                 string suffix = multiplier != 1 ? $" x{multiplier}" : string.Empty;
                 lines.Add($"{symbol.SafeDisplayName}: {entry.Value}{suffix}");
+                sources.Add(new CillyRoomScoreSource(symbol.SafeDisplayName, entry.Key, entry.Value, multiplier, finalScore));
             }
 
-            return new CillyRoomScoreResult(total, turnDelta, lines);
+            return new CillyRoomScoreResult(total, turnDelta, lines, sources);
         }
 
         private static void ApplyAnchorEffects(
@@ -123,13 +150,12 @@ namespace CillyRoomPrototype
             foreach (var position in positions)
             {
                 var symbol = board[position.x, position.y];
-                if (symbol.SafeId != "anchor")
+                if (symbol.SafeKind != CillyRoomSymbolKind.Anchor)
                 {
                     continue;
                 }
 
                 int adjacentBeaconCount = 0;
-                bool connectedToRift = false;
                 foreach (var adjacent in GetAdjacentPositions(position, true))
                 {
                     if (!baseScores.ContainsKey(adjacent))
@@ -138,13 +164,9 @@ namespace CillyRoomPrototype
                     }
 
                     var adjacentSymbol = board[adjacent.x, adjacent.y];
-                    if (adjacentSymbol.SafeId == "beacon")
+                    if (adjacentSymbol.SafeKind == CillyRoomSymbolKind.Beacon)
                     {
                         adjacentBeaconCount++;
-                    }
-                    else if (adjacentSymbol.SafeId == "subspace_rift")
-                    {
-                        connectedToRift = true;
                     }
                 }
 
@@ -163,10 +185,6 @@ namespace CillyRoomPrototype
                     lines.Add($"宇宙尘埃: 锚点数值 -{dustPenalty}");
                 }
 
-                if (connectedToRift)
-                {
-                    lines.Add("锚点: 抵消相邻亚空间裂缝");
-                }
             }
         }
 
@@ -174,19 +192,26 @@ namespace CillyRoomPrototype
             CillyRoomSymbolDefinition[,] board,
             Dictionary<Vector2Int, int> baseScores,
             IReadOnlyList<Vector2Int> positions,
+            bool hasSelectedAnchor,
             List<string> lines)
         {
             foreach (var position in positions)
             {
                 var symbol = board[position.x, position.y];
-                if (symbol.SafeId != "subspace_rift" || IsRiftCancelledByAnchor(board, baseScores, position))
+                if (symbol.SafeKind != CillyRoomSymbolKind.SubspaceRift)
                 {
+                    continue;
+                }
+
+                if (hasSelectedAnchor)
+                {
+                    lines.Add("锚点: 抵消同框亚空间裂缝");
                     continue;
                 }
 
                 foreach (var adjacent in GetAdjacentPositions(position, true))
                 {
-                    if (baseScores.ContainsKey(adjacent) && board[adjacent.x, adjacent.y].SafeId == "beacon")
+                    if (baseScores.ContainsKey(adjacent) && board[adjacent.x, adjacent.y].SafeKind == CillyRoomSymbolKind.Beacon)
                     {
                         baseScores[adjacent] = 0;
                         lines.Add("亚空间裂缝: 相邻信标失效");
@@ -205,7 +230,7 @@ namespace CillyRoomPrototype
             foreach (var position in positions)
             {
                 var symbol = board[position.x, position.y];
-                if (symbol.SafeId != "reality_singularity")
+                if (symbol.SafeKind != CillyRoomSymbolKind.RealitySingularity)
                 {
                     continue;
                 }
@@ -220,19 +245,6 @@ namespace CillyRoomPrototype
 
                 lines.Add("现实奇点: 相邻元素数值 x2");
             }
-        }
-
-        private static bool IsRiftCancelledByAnchor(CillyRoomSymbolDefinition[,] board, Dictionary<Vector2Int, int> baseScores, Vector2Int riftPosition)
-        {
-            foreach (var adjacent in GetAdjacentPositions(riftPosition, true))
-            {
-                if (baseScores.ContainsKey(adjacent) && board[adjacent.x, adjacent.y].SafeId == "anchor")
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         private static int RollInclusive(System.Random random, int minInclusive, int maxInclusive)

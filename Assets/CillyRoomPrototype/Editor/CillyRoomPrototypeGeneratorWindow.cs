@@ -56,7 +56,7 @@ namespace CillyRoomPrototype.Editor
             var artSet = CreateArtSet();
             var textConfig = CreateTextConfig();
             var symbols = CreateSymbols();
-            var levels = CreateLevels(symbols[6], symbols[7], symbols[8]);
+            var levels = CreateLevels(symbols[5], symbols[6], symbols[7]);
             var config = CreateConfig(artSet, textConfig, symbols, levels);
             var playerAnimatorController = CreateActorAnimatorController("PlayerActor.controller");
             var enemyAnimatorController = CreateActorAnimatorController("EnemyActor.controller");
@@ -116,15 +116,14 @@ namespace CillyRoomPrototype.Editor
         {
             return new List<CillyRoomSymbolDefinition>
             {
-                CreateElementSymbol(1, "beacon", "1", 3, new Color(0.88f, 0.88f, 0.88f, 1f)),
-                CreateElementSymbol(2, "life_signal", "2", 0, new Color(0.32f, 0.66f, 0.98f, 1f)),
-                CreateElementSymbol(3, "anchor", "3", 5, new Color(0.44f, 0.82f, 0.36f, 1f)),
-                CreateElementSymbol(4, "energy_core", "4", 1, new Color(0.98f, 0.58f, 0.24f, 1f)),
-                CreateElementSymbol(5, "turbulence", "5", -2, new Color(0.87f, 0.44f, 0.92f, 1f)),
-                CreateElementSymbol(6, "subspace_rift", "6", -5, new Color(0.96f, 0.82f, 0.22f, 1f)),
-                CreateElementSymbol(7, "cosmic_dust", "7", 0, new Color(0.56f, 0.62f, 0.68f, 1f)),
-                CreateElementSymbol(8, "reality_singularity", "8", 0, new Color(1f, 0.72f, 0.18f, 1f)),
-                CreateElementSymbol(9, "unknown_element", "9", 0, new Color(0.74f, 0.8f, 1f, 1f))
+                CreateElementSymbol(1, "beacon", "信标", CillyRoomSymbolKind.Beacon, 3, new Color(0.88f, 0.88f, 0.88f, 1f)),
+                CreateElementSymbol(2, "life_signal", "生命信号", CillyRoomSymbolKind.LifeSignal, 0, new Color(0.32f, 0.66f, 0.98f, 1f)),
+                CreateElementSymbol(3, "anchor", "锚点", CillyRoomSymbolKind.Anchor, 5, new Color(0.44f, 0.82f, 0.36f, 1f)),
+                CreateElementSymbol(4, "energy_core", "能量核心", CillyRoomSymbolKind.EnergyCore, 1, new Color(0.98f, 0.58f, 0.24f, 1f)),
+                CreateElementSymbol(5, "turbulence", "乱流", CillyRoomSymbolKind.Turbulence, -2, new Color(0.87f, 0.44f, 0.92f, 1f)),
+                CreateElementSymbol(6, "subspace_rift", "亚空间裂缝", CillyRoomSymbolKind.SubspaceRift, -5, new Color(0.96f, 0.22f, 0.5f, 1f)),
+                CreateElementSymbol(7, "cosmic_dust", "宇宙尘埃", CillyRoomSymbolKind.CosmicDust, 0, new Color(0.56f, 0.62f, 0.68f, 1f)),
+                CreateElementSymbol(8, "reality_singularity", "现实奇点", CillyRoomSymbolKind.RealitySingularity, 0, new Color(1f, 0.72f, 0.18f, 1f))
             };
         }
 
@@ -234,11 +233,11 @@ namespace CillyRoomPrototype.Editor
                         asset.randomSeed = 2026;
                     }
 
-                    if (asset.startingSymbols == null || asset.startingSymbols.Count == 0)
+                    if (!ContainsSameSymbols(asset.startingSymbols, symbols, 5))
                     {
                         asset.startingSymbols = new List<CillyRoomSymbolDefinition>
                         {
-                            symbols[0], symbols[1], symbols[2], symbols[3], symbols[4], symbols[5]
+                            symbols[0], symbols[1], symbols[2], symbols[3], symbols[4]
                         };
                     }
 
@@ -351,11 +350,6 @@ namespace CillyRoomPrototype.Editor
             var levelText = CreateText(topPanel.transform, "Level Text", textConfig.initialLevelText, 24, Color.white, TextAnchor.MiddleLeft);
             SetLowerLeft(levelText.rectTransform, 22f, 115f, 300f, 36f);
 
-            var scorePanel = CreatePanel(topPanel.transform, "Score Panel", new Color(0.12f, 0.2f, 0.25f, 1f), true);
-            SetLowerLeft(scorePanel.rectTransform, 500f, 28f, 250f, 92f);
-            var scoreText = CreateText(scorePanel.transform, "Score Text", string.Empty, 24, Color.white, TextAnchor.MiddleCenter);
-            Stretch(scoreText.rectTransform);
-
             var hpFrame = CreatePanel(topPanel.transform, "Enemy HP Frame", new Color(0.08f, 0.08f, 0.09f, 1f), true);
             SetLowerLeft(hpFrame.rectTransform, 780f, 116f, 390f, 28f);
             var hpFill = CreatePanel(hpFrame.transform, "Enemy HP Fill", new Color(0.95f, 0.08f, 0.05f, 1f), false);
@@ -401,18 +395,23 @@ namespace CillyRoomPrototype.Editor
             var rightPanel = CreatePanel(root.transform, "Right Control Panel", new Color(0.12f, 0.13f, 0.15f, 0.98f), true);
             SetLowerLeft(rightPanel.rectTransform, 985f, 45f, 275f, 475f);
 
+            var scorePanel = CreatePanel(rightPanel.transform, "Score Panel", new Color(0.12f, 0.2f, 0.25f, 1f), true);
+            SetLowerLeft(scorePanel.rectTransform, 32f, 350f, 210f, 88f);
+            var scoreText = CreateText(scorePanel.transform, "Score Text", string.Empty, 24, Color.white, TextAnchor.MiddleCenter);
+            Stretch(scoreText.rectTransform);
+
             var roundBox = CreatePanel(rightPanel.transform, "Round Score Box", new Color(0.09f, 0.16f, 0.2f, 1f), true);
-            SetLowerLeft(roundBox.rectTransform, 32f, 322f, 210f, 88f);
+            SetLowerLeft(roundBox.rectTransform, 32f, 242f, 210f, 88f);
             var roundScoreText = CreateText(roundBox.transform, "Round Score Text", textConfig.roundScoreEmptyText, 26, Color.white, TextAnchor.MiddleCenter);
             Stretch(roundScoreText.rectTransform);
 
             var turnBox = CreatePanel(rightPanel.transform, "Turn Box", new Color(0.16f, 0.15f, 0.13f, 1f), true);
-            SetLowerLeft(turnBox.rectTransform, 56f, 198f, 162f, 96f);
+            SetLowerLeft(turnBox.rectTransform, 56f, 126f, 162f, 96f);
             var turnText = CreateText(turnBox.transform, "Turn Text", string.Empty, 24, Color.white, TextAnchor.MiddleCenter);
             Stretch(turnText.rectTransform);
 
             var attackButton = CreateButton(rightPanel.transform, "Attack Button", textConfig.attackButtonText, new Color(0.78f, 0.24f, 0.18f, 1f));
-            SetLowerLeft(attackButton.GetComponent<RectTransform>(), 26f, 38f, 224f, 92f);
+            SetLowerLeft(attackButton.GetComponent<RectTransform>(), 26f, 18f, 224f, 88f);
 
             var detailText = CreateText(root.transform, "Selected Detail Text", textConfig.selectionHintText, 18, new Color(0.86f, 0.9f, 0.92f, 1f), TextAnchor.MiddleLeft);
             SetLowerLeft(detailText.rectTransform, 250f, 12f, 710f, 28f);
@@ -520,11 +519,11 @@ namespace CillyRoomPrototype.Editor
 
         private static CillyRoomRewardOptionView CreateRewardOptionPrefab(Transform parent, CillyRoomArtSet artSet, CillyRoomTextConfig textConfig)
         {
-            var button = CreateButton(parent, "Reward Option Prefab", "7", new Color(1f, 0.72f, 0.18f, 1f));
+            var button = CreateButton(parent, "Reward Option Prefab", "奖励", new Color(1f, 0.72f, 0.18f, 1f));
             SetLowerLeft(button.GetComponent<RectTransform>(), 0f, 0f, 176f, 210f);
             var icon = button.GetComponent<Image>();
             var name = button.GetComponentInChildren<Text>();
-            var score = CreateText(button.transform, "Score Text", textConfig.FormatRewardScore("7"), 20, Color.white, TextAnchor.MiddleCenter);
+            var score = CreateText(button.transform, "Score Text", textConfig.FormatRewardScore("奖励"), 20, Color.white, TextAnchor.MiddleCenter);
             SetLowerLeft(score.rectTransform, 16f, 26f, 144f, 32f);
             var view = button.gameObject.AddComponent<CillyRoomRewardOptionView>();
             view.Configure(button, icon, name, score);
@@ -549,7 +548,7 @@ namespace CillyRoomPrototype.Editor
             rig.symbolSprites = new List<SymbolSpriteBinding>();
             foreach (var symbol in symbols)
             {
-                EnsureArtCategory(symbolRoot, $"Number {symbol.displayName} Sprite Slot");
+                EnsureArtCategory(symbolRoot, $"{symbol.displayName} Sprite Slot");
                 rig.symbolSprites.Add(new SymbolSpriteBinding { symbolId = symbol.symbolId, symbol = symbol, sprite = symbol.artwork });
             }
 
@@ -657,7 +656,7 @@ namespace CillyRoomPrototype.Editor
             return color;
         }
 
-        private static CillyRoomSymbolDefinition CreateElementSymbol(int value, string symbolId, string displayName, int baseScore, Color color)
+        private static CillyRoomSymbolDefinition CreateElementSymbol(int value, string symbolId, string displayName, CillyRoomSymbolKind kind, int baseScore, Color color)
         {
             return CreateOrUpdateAsset<CillyRoomSymbolDefinition>(
                 $"{SymbolsFolder}/Number_{value}.asset",
@@ -665,6 +664,7 @@ namespace CillyRoomPrototype.Editor
                 {
                     asset.symbolId = symbolId;
                     asset.displayName = displayName;
+                    asset.kind = kind;
                     asset.baseScore = baseScore;
                     asset.tintColor = color;
                     asset.effect = CillyRoomSymbolEffect.None;
@@ -711,6 +711,24 @@ namespace CillyRoomPrototype.Editor
 
             EditorUtility.SetDirty(asset);
             return asset;
+        }
+
+        private static bool ContainsSameSymbols(IReadOnlyList<CillyRoomSymbolDefinition> currentSymbols, IReadOnlyList<CillyRoomSymbolDefinition> expectedSymbols, int expectedCount)
+        {
+            if (currentSymbols == null || currentSymbols.Count != expectedCount)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < expectedCount; i++)
+            {
+                if (currentSymbols[i] != expectedSymbols[i])
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static T CreateOrUpdateAsset<T>(string path, System.Action<T> configure) where T : ScriptableObject

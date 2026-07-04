@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: Number_7
   m_EditorClassIdentifier: 
   symbolId: cosmic_dust
-  displayName: 7
+  displayName: "\u5B87\u5B99\u5C18\u57C3"
+  kind: 7
   baseScore: 0
   tintColor: {r: 0.56, g: 0.62, b: 0.68, a: 1}
   artwork: {fileID: 0}
