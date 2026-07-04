@@ -17,7 +17,7 @@ MonoBehaviour:
   kind: 6
   baseScore: -5
   tintColor: {r: 0.96, g: 0.22, b: 0.5, a: 1}
-  artwork: {fileID: 0}
+  artwork: {fileID: 21300000, guid: 53a16a48c854b624f9f8c2aa0d93740a, type: 3}
   effect: 0
   effectMultiplier: 2
   effectIncludesDiagonals: 1

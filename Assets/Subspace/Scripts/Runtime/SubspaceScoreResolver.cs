@@ -44,6 +44,9 @@ namespace Subspace
    public static class SubspaceScoreResolver
    {
        private static readonly Vector2Int BonusScoreKey = new Vector2Int(int.MinValue, int.MinValue);
+       private const float ResourceScoreBoostFallback = 0.2f;
+       private const float AnchorEffectBoostFallback = 0.5f;
+       private const float PollutionReductionFallback = 0.5f;
 
        public static SubspaceScoreResult Calculate(SubspaceTileData[,] tiles, SubspaceSelectionShape shape, SubspaceScoreContext context, System.Random random = null)
        {
@@ -72,17 +75,34 @@ namespace Subspace
                }
 
                var symbol = SubspaceTileRulebook.GetSymbolData(tile.currentSymbol);
-               int tileModifier = SubspaceTileRulebook.GetScoreModifier(tile);
-               int finalScore = symbol.instantScore + tile.baseBonusScore + tileModifier;
+               int instantScore = ApplyResourceScoreBoost(symbol, context, out var resourceBoostDetail);
+               int tileModifier = GetScoreModifier(tile, context, out var pollutionReductionDetail);
+               int tileEffectScore = ApplyAnchorEffectBoost(tile.baseBonusScore + tileModifier, context, out var anchorBoostDetail);
+               int finalScore = instantScore + tileEffectScore;
                total += finalScore;
 
                string detail = $"即时 {symbol.instantScore}, 地块 {SubspaceTileRulebook.FormatSigned(tile.baseBonusScore)}, 状态 {SubspaceTileRulebook.FormatSigned(tileModifier)}";
+               if (!string.IsNullOrEmpty(resourceBoostDetail))
+               {
+                   detail += $"; {resourceBoostDetail}";
+               }
+
+               if (!string.IsNullOrEmpty(anchorBoostDetail))
+               {
+                   detail += $"; {anchorBoostDetail}";
+               }
+
+               if (!string.IsNullOrEmpty(pollutionReductionDetail))
+               {
+                   detail += $"; {pollutionReductionDetail}";
+               }
+
                lines.Add($"{symbol.displayName}: {finalScore}");
                sources.Add(new SubspaceScoreSource(
                    symbol.displayName,
                    position,
                    symbol.instantScore,
-                   finalScore,
+                   instantScore + tileEffectScore,
                    1,
                    finalScore,
                    detail));
@@ -91,8 +111,107 @@ namespace Subspace
           }
 
           ApplySynergyBonuses(tiles, shape, context, total, lines, sources, ref total);
+          ApplyFirstScanDouble(context, lines, sources, ref total);
 
           return new SubspaceScoreResult(total, 0, lines, sources);
+     }
+
+     private static int ApplyResourceScoreBoost(SubspaceSymbolData symbol, SubspaceScoreContext context, out string detail)
+     {
+         detail = string.Empty;
+         if (symbol == null)
+         {
+             return 0;
+         }
+
+         int score = symbol.instantScore;
+         if (score == 0 || !context.HasUpgrade(SubspaceUpgradeType.ResourceScoreBoost) || !IsResourceSymbol(symbol))
+         {
+             return score;
+         }
+
+         float bonus = context.GetUpgradeFloat(SubspaceUpgradeType.ResourceScoreBoost, ResourceScoreBoostFallback);
+         int boosted = Mathf.RoundToInt(score * (1f + bonus));
+         detail = $"ResourceScoreBoost x{1f + bonus:0.##}: {score} -> {boosted}";
+         return boosted;
+     }
+
+     private static int ApplyAnchorEffectBoost(int tileEffectScore, SubspaceScoreContext context, out string detail)
+     {
+         detail = string.Empty;
+         if (tileEffectScore == 0 || !context.HasUpgrade(SubspaceUpgradeType.AnchorEffectBoost))
+         {
+             return tileEffectScore;
+         }
+
+         float bonus = context.GetUpgradeFloat(SubspaceUpgradeType.AnchorEffectBoost, AnchorEffectBoostFallback);
+         int boosted = Mathf.RoundToInt(tileEffectScore * (1f + bonus));
+         detail = $"AnchorEffectBoost x{1f + bonus:0.##}: {tileEffectScore} -> {boosted}";
+         return boosted;
+     }
+
+     private static int GetScoreModifier(SubspaceTileData tile, SubspaceScoreContext context, out string detail)
+     {
+         detail = string.Empty;
+         if (tile == null)
+         {
+             return 0;
+         }
+
+         int score = 0;
+         foreach (var buff in tile.buffs)
+         {
+             score += buff.ScoreModifier;
+         }
+
+         int debuffScore = 0;
+         foreach (var debuff in tile.debuffs)
+         {
+             debuffScore += debuff.ScoreModifier;
+         }
+
+         if (debuffScore != 0 && context.HasUpgrade(SubspaceUpgradeType.PollutionReduction))
+         {
+             int originalDebuffScore = debuffScore;
+             float reduction = context.GetUpgradeFloat(SubspaceUpgradeType.PollutionReduction, PollutionReductionFallback);
+             debuffScore = Mathf.RoundToInt(debuffScore * Mathf.Clamp01(1f - reduction));
+             detail = $"PollutionReduction {reduction:P0}: debuff {originalDebuffScore} -> {debuffScore}";
+         }
+
+         return score + debuffScore;
+     }
+
+     private static bool IsResourceSymbol(SubspaceSymbolData symbol)
+     {
+         if (symbol == null)
+         {
+             return false;
+         }
+
+         return symbol.type == SubspaceSymbolKind.Generic
+             || symbol.type == SubspaceSymbolKind.Beacon
+             || symbol.type == SubspaceSymbolKind.Anchor
+             || symbol.type == SubspaceSymbolKind.EnergyCore;
+     }
+
+     private static void ApplyFirstScanDouble(SubspaceScoreContext context, List<string> lines, List<SubspaceScoreSource> sources, ref int total)
+     {
+         if (total == 0 || !context.isFirstScanThisLevel || !context.HasUpgrade(SubspaceUpgradeType.FirstScanDouble))
+         {
+             return;
+         }
+
+         int bonus = total;
+         total += bonus;
+         lines.Add($"FirstScanDouble: +{bonus}");
+         sources.Add(new SubspaceScoreSource(
+             "FirstScanDouble",
+             BonusScoreKey,
+             bonus,
+             bonus,
+             1,
+             bonus,
+             $"First scan this level doubled score from {bonus} to {total}."));
      }
 
      private static void ApplySynergyBonuses(SubspaceTileData[,] tiles, SubspaceSelectionShape shape, SubspaceScoreContext context, int currentTotal, List<string> lines, List<SubspaceScoreSource> sources, ref int total)

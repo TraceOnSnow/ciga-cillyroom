@@ -18,7 +18,9 @@ namespace Subspace
        [Header("Scene Components")]
        [SerializeField] private SubspaceBriefingController briefing;
        [SerializeField] private SubspaceMenuController menu;
+       [SerializeField] private SubspacePauseMenuController pauseMenu;
        [SerializeField] private SubspaceUIController ui;
+       [SerializeField] private SubspaceAudioController audioController;
         [SerializeField] private SubspaceBoardController board;
         [SerializeField] private SubspaceSelectionController selection;
         [SerializeField] private SubspaceActorController player;
@@ -70,14 +72,18 @@ namespace Subspace
         private int levelIndex;
         private int totalScore;
         private int remainingTurns;
+        private int scansUsedThisTurn;
+        private bool hasScannedThisLevel;
         private bool busy;
 
         public void Configure(
             SubspaceGameConfig gameConfig,
-            SubspaceArtRig rig,
+           SubspaceArtRig rig,
            SubspaceBriefingController briefingController,
            SubspaceMenuController menuController,
+           SubspacePauseMenuController pauseMenuController,
            SubspaceUIController uiController,
+           SubspaceAudioController audio,
             SubspaceBoardController boardController,
             SubspaceSelectionController selectionController,
             SubspaceActorController playerController,
@@ -85,10 +91,12 @@ namespace Subspace
             SubspaceRewardController rewardController)
         {
             config = gameConfig;
-            artRig = rig;
+           artRig = rig;
            briefing = briefingController;
            menu = menuController;
+           pauseMenu = pauseMenuController;
            ui = uiController;
+           audioController = audio;
             board = boardController;
             selection = selectionController;
             player = playerController;
@@ -135,9 +143,40 @@ namespace Subspace
                menu.SetTextConfig(textConfig);
            }
            rewards.SetTextConfig(textConfig);
+           if (audioController == null)
+           {
+               audioController = SubspaceAudioController.GetOrCreate();
+           }
+
+           audioController.PlayBackgroundMusic();
+           ui.SetAudioController(audioController);
+
+           if (pauseMenu == null && ui != null)
+           {
+               pauseMenu = ui.gameObject.AddComponent<SubspacePauseMenuController>();
+           }
+
+           if (pauseMenu != null)
+           {
+               pauseMenu.SetTextConfig(textConfig);
+               pauseMenu.SetAudioController(audioController);
+               pauseMenu.Hide();
+           }
+           if (menu != null)
+           {
+               menu.SetAudioController(audioController);
+           }
            random = config.useFixedSeed ? new System.Random(config.randomSeed) : new System.Random();
            ui.SetAttackCallback(Attack);
            ShowMenu();
+       }
+
+        private void Update()
+        {
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                TogglePauseMenu();
+            }
         }
 
        private void ShowMenu()
@@ -146,6 +185,10 @@ namespace Subspace
            ui.HideMessage();
            rewards.Hide();
            briefing.Hide();
+           if (pauseMenu != null)
+           {
+               pauseMenu.Hide();
+           }
 
            if (menu != null)
            {
@@ -159,6 +202,11 @@ namespace Subspace
 
        private void StartCampaign()
         {
+           if (pauseMenu != null)
+           {
+               pauseMenu.Hide();
+           }
+
            symbolPool.Clear();
            activeUpgrades.Clear();
            foreach (var symbol in config.startingSymbols)
@@ -202,6 +250,8 @@ namespace Subspace
 
             totalScore = 0;
             remainingTurns = currentLevel.SafeTurns;
+            scansUsedThisTurn = 0;
+            hasScannedThisLevel = false;
             busy = false;
 
             player.SetColors(artSet.playerColor, artSet.playerAttackColor, artSet.playerColor);
@@ -220,16 +270,77 @@ namespace Subspace
                board.RerollAllSymbols();
            }
             selection.ResetSelection(currentLevel.SafeSelectionWidth, currentLevel.SafeSelectionHeight);
+            ApplyScannerShapeFromActiveUpgrades();
             ui.SetAttackEnabled(true);
-            ui.Refresh(currentLevel, totalScore, remainingTurns, 0, null);
+            ui.Refresh(currentLevel, totalScore, remainingTurns, 0, null, activeUpgrades);
         }
 
         private void Attack()
         {
-            if (!busy)
+            if (!busy && (pauseMenu == null || !pauseMenu.IsShowing))
             {
+                audioController?.PlayAttackClick();
                 StartCoroutine(AttackRoutine());
             }
+        }
+
+        private void TogglePauseMenu()
+        {
+            if (pauseMenu == null)
+            {
+                return;
+            }
+
+            if (pauseMenu.IsShowing)
+            {
+                ResumeFromPauseMenu();
+                return;
+            }
+
+            if (busy || !IsGameplayScreenActive())
+            {
+                return;
+            }
+
+            ui.SetAttackEnabled(false);
+            pauseMenu.Show(ReturnToMainMenuFromPause, ExitGame, ResumeFromPauseMenu);
+        }
+
+        private bool IsGameplayScreenActive()
+        {
+            return currentLevel != null && ui != null && (rewards == null || !rewards.gameObject.activeInHierarchy);
+        }
+
+        private void ResumeFromPauseMenu()
+        {
+            if (pauseMenu != null)
+            {
+                pauseMenu.Hide();
+            }
+
+            if (!busy && currentLevel != null && remainingTurns > 0 && totalScore < currentLevel.SafeTargetScore)
+            {
+                ui.SetAttackEnabled(true);
+            }
+        }
+
+        private void ReturnToMainMenuFromPause()
+        {
+            busy = false;
+            if (pauseMenu != null)
+            {
+                pauseMenu.Hide();
+            }
+
+            ShowMenu();
+        }
+
+        private void ExitGame()
+        {
+            Application.Quit();
+#if UNITY_EDITOR
+            Debug.Log("[Subspace] Exit Game clicked. Application.Quit is ignored in the Unity Editor.");
+#endif
         }
 
         private IEnumerator AttackRoutine()
@@ -237,14 +348,10 @@ namespace Subspace
             busy = true;
             ui.SetAttackEnabled(false);
 
-            var upgradeIds = new List<string>();
-            foreach (var upgrade in activeUpgrades)
-            {
-                upgradeIds.Add(upgrade.SafeId);
-            }
-
-            var context = new SubspaceScoreContext(board.Tiles, upgradeIds);
+            var context = new SubspaceScoreContext(board.Tiles, GetActiveUpgradeIds(), activeUpgrades, !hasScannedThisLevel);
             var result = SubspaceScoreResolver.Calculate(board.Tiles, selection.CurrentShape, context, random);
+            hasScannedThisLevel = true;
+            scansUsedThisTurn++;
             board.RefreshAll();
             totalScore += result.total;
             bool forcedFailure = forceFailureOnNextAttack;
@@ -255,19 +362,32 @@ namespace Subspace
                 forceFailureOnNextAttack = keepForceFailureEnabled;
             }
 
-            remainingTurns = Mathf.Max(0, remainingTurns - 1 + result.turnDelta);
+            bool turnComplete = scansUsedThisTurn >= GetMaxScansPerTurn();
+            if (turnComplete)
+            {
+                remainingTurns = Mathf.Max(0, remainingTurns - 1 + result.turnDelta);
+                scansUsedThisTurn = 0;
+            }
+            else if (result.turnDelta > 0)
+            {
+                remainingTurns += result.turnDelta;
+            }
+
             if (forcedFailure)
             {
                 remainingTurns = 0;
+                scansUsedThisTurn = 0;
             }
-            ui.Refresh(currentLevel, totalScore, remainingTurns, result.total, result.lines);
+            ui.Refresh(currentLevel, totalScore, remainingTurns, result.total, result.lines, activeUpgrades);
             LogScoreSources(result, selection.CurrentSelection);
 
             yield return PlayPlayerAttackWithBeamAndEnemyHit();
 
             if (totalScore >= currentLevel.SafeTargetScore)
             {
+                audioController?.PlayMonsterDeath();
                 enemy.ShowDefeated(GetEnemyDefeated());
+                audioController?.PlayVictoryEscape();
                 yield return player.PlayEscape();
                 ShowRewards();
                 yield break;
@@ -275,13 +395,18 @@ namespace Subspace
 
             if (remainingTurns <= 0)
             {
+                audioController?.PlayPlayerDeath();
                 yield return PlayFailureCounterAttack();
                 ShowFailureMessage();
                 yield break;
             }
 
-            board.RerollOutside(selection.CurrentSelection);
-            ui.Refresh(currentLevel, totalScore, remainingTurns, 0, null);
+            if (turnComplete)
+            {
+                board.RerollOutside(selection.CurrentSelection);
+            }
+
+            ui.Refresh(currentLevel, totalScore, remainingTurns, 0, null, activeUpgrades);
             ui.SetAttackEnabled(true);
             busy = false;
         }
@@ -502,6 +627,7 @@ namespace Subspace
            var symbolRewards = currentLevel != null ? currentLevel.rewardChoices : null;
            var upgradeRewards = GetAvailableUpgradeChoices();
            var title = currentLevel != null ? textConfig.FormatRewardTitle(currentLevel.displayName) : textConfig.rewardFallbackTitle;
+           audioController?.PlayRewardChoiceAppear();
            rewards.ShowWithUpgrades(title, symbolRewards, upgradeRewards, ChooseReward, ChooseUpgrade, SkipReward, ResolveSymbolSprite);
        }
 
@@ -521,9 +647,48 @@ namespace Subspace
            {
                activeUpgrades.Add(upgrade);
                ApplyUpgradeEffect(upgrade);
+               ui.RefreshUpgrades(activeUpgrades);
            }
 
            SkipReward();
+       }
+
+       private List<string> GetActiveUpgradeIds()
+       {
+           var upgradeIds = new List<string>();
+           foreach (var upgrade in activeUpgrades)
+           {
+               if (upgrade != null)
+               {
+                   upgradeIds.Add(upgrade.SafeId);
+               }
+           }
+
+           return upgradeIds;
+       }
+
+       private int GetMaxScansPerTurn()
+       {
+           foreach (var upgrade in activeUpgrades)
+           {
+               if (upgrade != null && upgrade.type == SubspaceUpgradeType.ExtraScan)
+               {
+                   return Mathf.Max(2, upgrade.intParam > 0 ? upgrade.intParam : 2);
+               }
+           }
+
+           return 1;
+       }
+
+       private void ApplyScannerShapeFromActiveUpgrades()
+       {
+           foreach (var upgrade in activeUpgrades)
+           {
+               if (upgrade != null && upgrade.type == SubspaceUpgradeType.ScannerShape)
+               {
+                   ApplyUpgradeEffect(upgrade);
+               }
+           }
        }
 
        private System.Collections.Generic.List<SubspaceUpgradeDefinition> GetAvailableUpgradeChoices()
@@ -588,7 +753,7 @@ namespace Subspace
                    }
                    break;
                default:
-                   Debug.Log($"[Subspace] Upgrade applied: {upgrade.displayName} ({upgrade.type})");
+                   Debug.Log($"[Subspace] Upgrade active: {upgrade.displayName} ({upgrade.type})");
                    break;
            }
        }
@@ -624,6 +789,10 @@ namespace Subspace
             builder.Append(totalScore);
             builder.Append(" | Remaining Turns: ");
             builder.Append(remainingTurns);
+            builder.Append(" | Scan ");
+            builder.Append(scansUsedThisTurn == 0 ? GetMaxScansPerTurn() : scansUsedThisTurn);
+            builder.Append("/");
+            builder.Append(GetMaxScansPerTurn());
 
             if (result.sources == null || result.sources.Count == 0)
             {

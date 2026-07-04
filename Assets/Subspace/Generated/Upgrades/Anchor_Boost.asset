@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76b63b9057b9430988e4c13e6d555b8a, type: 3}
+  m_Name: Anchor_Boost
+  m_EditorClassIdentifier: 
+  upgradeId: anchor_effect_50
+  displayName: "\u951A\u5B9A\u589E\u5F3A"
+  description: "\u951A\u5B9A\u5143\u7D20\u5730\u5757\u6548\u679C +50%\u3002"
+  type: 1
+  shapeOffsets: []
+  floatParam: 0.5
+  intParam: 0

@@ -116,13 +116,21 @@ namespace Subspace
         public readonly int columns;
         public readonly int rows;
         public readonly IReadOnlyList<string> playerUpgrades;
+        public readonly IReadOnlyList<SubspaceUpgradeDefinition> upgradeDefinitions;
+        public readonly bool isFirstScanThisLevel;
 
-        public SubspaceScoreContext(SubspaceTileData[,] boardTiles, IReadOnlyList<string> upgrades = null)
+        public SubspaceScoreContext(
+            SubspaceTileData[,] boardTiles,
+            IReadOnlyList<string> upgrades = null,
+            IReadOnlyList<SubspaceUpgradeDefinition> definitions = null,
+            bool firstScanThisLevel = false)
         {
             tiles = boardTiles;
             columns = boardTiles != null ? boardTiles.GetLength(0) : 0;
             rows = boardTiles != null ? boardTiles.GetLength(1) : 0;
             playerUpgrades = upgrades ?? new List<string>();
+            upgradeDefinitions = definitions ?? new List<SubspaceUpgradeDefinition>();
+            isFirstScanThisLevel = firstScanThisLevel;
         }
 
         public SubspaceTileData GetTile(int x, int y)
@@ -147,6 +155,11 @@ namespace Subspace
 
         public bool HasUpgrade(string upgradeId)
         {
+            if (playerUpgrades == null)
+            {
+                return false;
+            }
+
             for (int i = 0; i < playerUpgrades.Count; i++)
             {
                 if (playerUpgrades[i] == upgradeId)
@@ -156,6 +169,62 @@ namespace Subspace
             }
 
             return false;
+        }
+
+        public bool HasUpgrade(SubspaceUpgradeType type)
+        {
+            if (upgradeDefinitions == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < upgradeDefinitions.Count; i++)
+            {
+                if (upgradeDefinitions[i] != null && upgradeDefinitions[i].type == type)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public float GetUpgradeFloat(SubspaceUpgradeType type, float fallback)
+        {
+            if (upgradeDefinitions == null)
+            {
+                return fallback;
+            }
+
+            for (int i = 0; i < upgradeDefinitions.Count; i++)
+            {
+                var upgrade = upgradeDefinitions[i];
+                if (upgrade != null && upgrade.type == type)
+                {
+                    return upgrade.floatParam > 0f ? upgrade.floatParam : fallback;
+                }
+            }
+
+            return fallback;
+        }
+
+        public int GetUpgradeInt(SubspaceUpgradeType type, int fallback)
+        {
+            if (upgradeDefinitions == null)
+            {
+                return fallback;
+            }
+
+            for (int i = 0; i < upgradeDefinitions.Count; i++)
+            {
+                var upgrade = upgradeDefinitions[i];
+                if (upgrade != null && upgrade.type == type)
+                {
+                    return upgrade.intParam > 0 ? upgrade.intParam : fallback;
+                }
+            }
+
+            return fallback;
         }
     }
 }

@@ -19,6 +19,8 @@ namespace Subspace.Editor
         private const string SymbolsFolder = GeneratedFolder + "/Symbols";
         private const string LevelsFolder = GeneratedFolder + "/Levels";
         private const string AnimatorsFolder = GeneratedFolder + "/Animators";
+        private const string MusicFolder = "Assets/Art/Audio/Music";
+        private const string SfxFolder = "Assets/Art/Audio/SFX";
         private const string MonsterOneSkeletonPath = "Assets/Art/Monster/Monster_1/MONSTER1_SkeletonData.asset";
         private const string MonsterOneMaterialPath = "Assets/Art/Monster/Monster_1/MONSTER1_Material.mat";
 
@@ -75,7 +77,9 @@ namespace Subspace.Editor
                artRig,
                scene.briefing,
                scene.menu,
+               scene.pauseMenu,
                scene.ui,
+               scene.audio,
                scene.board,
                scene.selection,
                scene.player,
@@ -211,12 +215,24 @@ namespace Subspace.Editor
                SubspaceUpgradeType.AnchorEffectBoost,
                floatParam: 0.5f);
 
+           var firstScanDouble = CreateUpgradeAsset($"{folder}/First_Scan_Double.asset", "first_scan_double",
+               "\u9996\u6b21\u626b\u63cf\u7ffb\u500d",
+               "\u6bcf\u5173\u9996\u6b21\u7ed3\u7b97\u5f97\u5206 x2\u3002",
+               SubspaceUpgradeType.FirstScanDouble);
+
+           var pollutionReduction = CreateUpgradeAsset($"{folder}/Pollution_Reduction.asset", "pollution_reduction_50",
+               "\u6c61\u67d3\u51c0\u5316",
+               "Debuff \u9020\u6210\u7684\u8d1f\u5206\u964d\u4f4e 50%\u3002",
+               SubspaceUpgradeType.PollutionReduction,
+               floatParam: 0.5f);
+
            var extraScan = CreateUpgradeAsset($"{folder}/Extra_Scan.asset", "extra_scan",
                "\u989d\u5916\u626b\u63cf",
                "\u6bcf\u56de\u5408\u53ef\u989d\u5916\u626b\u63cf\u4e00\u6b21\u3002",
-               SubspaceUpgradeType.ExtraScan);
+               SubspaceUpgradeType.ExtraScan,
+               intParam: 2);
 
-           return new List<SubspaceUpgradeDefinition> { scanner2x3, scanner3x3, crossShape, resourceBoost, anchorBoost, extraScan };
+           return new List<SubspaceUpgradeDefinition> { scanner2x3, scanner3x3, crossShape, resourceBoost, anchorBoost, firstScanDouble, pollutionReduction, extraScan };
        }
 
        private static SubspaceUpgradeDefinition CreateUpgradeAsset(
@@ -334,9 +350,17 @@ namespace Subspace.Editor
                        asset.levels = new List<SubspaceLevelDefinition> { levels[0], levels[1] };
                    }
 
-                   if (asset.upgradePool == null || asset.upgradePool.Count == 0)
+                   if (asset.upgradePool == null)
                    {
-                       asset.upgradePool = new List<SubspaceUpgradeDefinition>(upgrades);
+                       asset.upgradePool = new List<SubspaceUpgradeDefinition>();
+                   }
+
+                   foreach (var upgrade in upgrades)
+                   {
+                       if (upgrade != null && !asset.upgradePool.Contains(upgrade))
+                       {
+                           asset.upgradePool.Add(upgrade);
+                       }
                    }
                });
         }
@@ -360,6 +384,8 @@ namespace Subspace.Editor
            var game = BuildGame(canvas.transform, artSet, textConfig);
             var reward = BuildRewards(canvas.transform, artSet, textConfig);
             var message = BuildMessage(canvas.transform, artSet, textConfig);
+            var pause = BuildPauseMenu(canvas.transform, artSet, textConfig);
+            var audio = BuildAudio(root);
 
             game.ui.Configure(
                 game.root,
@@ -375,7 +401,9 @@ namespace Subspace.Editor
                 message.titleText,
                 message.bodyText,
                 message.button);
+            game.ui.SetUpgradeText(game.upgradeText);
             game.ui.SetTextConfig(textConfig);
+            game.ui.SetAudioController(audio);
 
             var board = game.boardObject.AddComponent<SubspaceBoardController>();
             board.Configure(game.boardRect, game.grid, game.cellPrefab);
@@ -399,18 +427,24 @@ namespace Subspace.Editor
            reward.controller.SetTextConfig(textConfig);
            briefing.controller.SetTextConfig(textConfig);
            menu.controller.SetTextConfig(textConfig);
+           pause.controller.SetTextConfig(textConfig);
+           menu.controller.SetAudioController(audio);
+           pause.controller.SetAudioController(audio);
 
            game.root.SetActive(false);
            reward.root.SetActive(false);
            message.root.SetActive(false);
            menu.root.SetActive(false);
+           pause.root.SetActive(false);
 
            return new ComponentScene
            {
                director = director,
                briefing = briefing.controller,
                menu = menu.controller,
+               pauseMenu = pause.controller,
                ui = game.ui,
+               audio = audio,
                 board = board,
                 selection = selector,
                 player = player,
@@ -419,6 +453,33 @@ namespace Subspace.Editor
                 beamStartPoint = game.beamStartPoint,
                 beamEndPoint = game.beamEndPoint
             };
+        }
+
+        private static SubspaceAudioController BuildAudio(Transform root)
+        {
+            var audioObject = CreateChild(root, "AudioManager");
+            var musicSource = audioObject.AddComponent<AudioSource>();
+            musicSource.playOnAwake = false;
+            musicSource.loop = true;
+            musicSource.spatialBlend = 0f;
+
+            var sfxSource = audioObject.AddComponent<AudioSource>();
+            sfxSource.playOnAwake = false;
+            sfxSource.spatialBlend = 0f;
+
+            var controller = audioObject.AddComponent<SubspaceAudioController>();
+            controller.Configure(
+                musicSource,
+                sfxSource,
+                LoadAudioClip($"{MusicFolder}/\u6e38\u620f\u80cc\u666f\u97f3\u4e50.m4a"),
+                LoadAudioClip($"{SfxFolder}/\u9009\u62e9\u97f3\u6548.mp3"),
+                LoadAudioClip($"{SfxFolder}/\u786e\u5b9a\u97f3\u6548.mp3"),
+                LoadAudioClip($"{SfxFolder}/\u70b9\u51fb\u653b\u51fb\u97f3\u6548.mp3"),
+                LoadAudioClip($"{SfxFolder}/\u73a9\u5bb6\u80dc\u5229\u9003\u8131\u97f3\u6548.mp3"),
+                LoadAudioClip($"{SfxFolder}/\u602a\u7269\u6b7b\u4ea1\u97f3\u6548.mp3"),
+                LoadAudioClip($"{SfxFolder}/\u98de\u8239\u7206\u70b8\u97f3\u6548.mp3"),
+                LoadAudioClip($"{SfxFolder}/3\u90091\u51fa\u73b0\u97f3\u6548.mp3"));
+            return controller;
         }
 
         private static BriefingParts BuildBriefing(Transform canvas, SubspaceArtSet artSet, SubspaceTextConfig textConfig)
@@ -452,11 +513,71 @@ namespace Subspace.Editor
            SetLowerLeft(subtitle.rectTransform, 240f, 320f, 800f, 50f);
 
            var button = CreateButton(root.transform, "Start Button", textConfig.menuStartButtonText, artSet.accentColor);
-           SetLowerLeft(button.GetComponent<RectTransform>(), 520f, 200f, 240f, 66f);
+           SetLowerLeft(button.GetComponent<RectTransform>(), 520f, 236f, 240f, 58f);
+
+           var settingsButton = CreateButton(root.transform, "Settings Button", textConfig.menuSettingsButtonText, new Color(0.16f, 0.42f, 0.55f, 1f));
+           SetLowerLeft(settingsButton.GetComponent<RectTransform>(), 520f, 164f, 240f, 58f);
+
+           var exitButton = CreateButton(root.transform, "Exit Button", textConfig.menuExitButtonText, new Color(0.46f, 0.18f, 0.18f, 1f));
+           SetLowerLeft(exitButton.GetComponent<RectTransform>(), 520f, 92f, 240f, 58f);
+
+           var settingsPanel = CreatePanel(root.transform, "Settings Panel", new Color(0.06f, 0.07f, 0.08f, 0.94f), true);
+           SetLowerLeft(settingsPanel.rectTransform, 425f, 205f, 430f, 310f);
+           var settingsTitle = CreateText(settingsPanel.transform, "Settings Title", textConfig.settingsTitleText, 30, Color.white, TextAnchor.MiddleCenter);
+           SetLowerLeft(settingsTitle.rectTransform, 45f, 242f, 340f, 46f);
+           var musicLabel = CreateText(settingsPanel.transform, "Music Volume Label", textConfig.musicVolumeText, 20, Color.white, TextAnchor.MiddleLeft);
+           SetLowerLeft(musicLabel.rectTransform, 46f, 174f, 130f, 34f);
+           var musicSlider = CreateSlider(settingsPanel.transform, "Music Volume Slider", 0.8f, artSet.accentColor);
+           SetLowerLeft(musicSlider.GetComponent<RectTransform>(), 176f, 180f, 210f, 22f);
+           var sfxLabel = CreateText(settingsPanel.transform, "SFX Volume Label", textConfig.sfxVolumeText, 20, Color.white, TextAnchor.MiddleLeft);
+           SetLowerLeft(sfxLabel.rectTransform, 46f, 110f, 130f, 34f);
+           var sfxSlider = CreateSlider(settingsPanel.transform, "SFX Volume Slider", 0.8f, artSet.accentColor);
+           SetLowerLeft(sfxSlider.GetComponent<RectTransform>(), 176f, 116f, 210f, 22f);
+           var settingsClose = CreateButton(settingsPanel.transform, "Settings Close Button", textConfig.settingsCloseButtonText, new Color(0.16f, 0.42f, 0.55f, 1f));
+           SetLowerLeft(settingsClose.GetComponent<RectTransform>(), 125f, 28f, 180f, 52f);
+           settingsPanel.gameObject.SetActive(false);
 
            var controller = root.gameObject.AddComponent<SubspaceMenuController>();
            controller.Configure(root.gameObject, root, title, subtitle, button);
+           controller.ConfigureButtons(settingsButton, exitButton);
+           controller.ConfigureSettings(settingsPanel.gameObject, settingsTitle, musicLabel, musicSlider, sfxLabel, sfxSlider, settingsClose);
            return new MenuParts { root = root.gameObject, controller = controller };
+       }
+
+       private static PauseMenuParts BuildPauseMenu(Transform canvas, SubspaceArtSet artSet, SubspaceTextConfig textConfig)
+       {
+           var root = CreatePanel(canvas, "Pause Options Menu", new Color(0.02f, 0.025f, 0.03f, 0.9f), true);
+           Stretch(root.rectTransform);
+
+           var panel = CreatePanel(root.transform, "Options Panel", new Color(0.09f, 0.1f, 0.12f, 0.96f), true);
+           SetLowerLeft(panel.rectTransform, 445f, 190f, 390f, 340f);
+
+           var title = CreateText(panel.transform, "Options Title", textConfig.pauseTitleText, 34, Color.white, TextAnchor.MiddleCenter);
+           SetLowerLeft(title.rectTransform, 45f, 278f, 300f, 48f);
+
+           var musicLabel = CreateText(panel.transform, "Music Volume Label", textConfig.musicVolumeText, 18, Color.white, TextAnchor.MiddleLeft);
+           SetLowerLeft(musicLabel.rectTransform, 42f, 234f, 120f, 30f);
+           var musicSlider = CreateSlider(panel.transform, "Music Volume Slider", 0.8f, artSet.accentColor);
+           SetLowerLeft(musicSlider.GetComponent<RectTransform>(), 166f, 240f, 190f, 20f);
+
+           var sfxLabel = CreateText(panel.transform, "SFX Volume Label", textConfig.sfxVolumeText, 18, Color.white, TextAnchor.MiddleLeft);
+           SetLowerLeft(sfxLabel.rectTransform, 42f, 194f, 120f, 30f);
+           var sfxSlider = CreateSlider(panel.transform, "SFX Volume Slider", 0.8f, artSet.accentColor);
+           SetLowerLeft(sfxSlider.GetComponent<RectTransform>(), 166f, 200f, 190f, 20f);
+
+           var resume = CreateButton(panel.transform, "Resume Button", textConfig.pauseResumeButtonText, artSet.accentColor);
+           SetLowerLeft(resume.GetComponent<RectTransform>(), 75f, 124f, 240f, 52f);
+
+           var mainMenu = CreateButton(panel.transform, "Main Menu Button", textConfig.pauseMainMenuButtonText, new Color(0.16f, 0.42f, 0.55f, 1f));
+           SetLowerLeft(mainMenu.GetComponent<RectTransform>(), 75f, 64f, 240f, 52f);
+
+           var exit = CreateButton(panel.transform, "Exit Game Button", textConfig.pauseExitButtonText, new Color(0.46f, 0.18f, 0.18f, 1f));
+           SetLowerLeft(exit.GetComponent<RectTransform>(), 75f, 4f, 240f, 52f);
+
+           var controller = root.gameObject.AddComponent<SubspacePauseMenuController>();
+           controller.Configure(root.gameObject, title, mainMenu, exit, resume);
+           controller.ConfigureSliders(musicLabel, musicSlider, sfxLabel, sfxSlider);
+           return new PauseMenuParts { root = root.gameObject, controller = controller };
        }
 
        private static GameParts BuildGame(Transform canvas, SubspaceArtSet artSet, SubspaceTextConfig textConfig)
@@ -532,6 +653,9 @@ namespace Subspace.Editor
             var turnText = CreateText(turnBox.transform, "Turn Text", string.Empty, 24, Color.white, TextAnchor.MiddleCenter);
             Stretch(turnText.rectTransform);
 
+            var upgradeText = CreateText(rightPanel.transform, "Selected Upgrades Text", "\u5df2\u9009\u5347\u7ea7\n-", 16, new Color(0.92f, 0.95f, 1f, 1f), TextAnchor.UpperLeft);
+            SetLowerLeft(upgradeText.rectTransform, 28f, 108f, 220f, 70f);
+
             var attackButton = CreateButton(rightPanel.transform, "Attack Button", textConfig.attackButtonText, new Color(0.78f, 0.24f, 0.18f, 1f));
             SetLowerLeft(attackButton.GetComponent<RectTransform>(), 26f, 18f, 224f, 88f);
 
@@ -550,6 +674,7 @@ namespace Subspace.Editor
                 turnText = turnText,
                 roundScoreText = roundScoreText,
                 detailText = detailText,
+                upgradeText = upgradeText,
                 hpFill = hpFill,
                 attackButton = attackButton,
                 boardObject = boardPanel.gameObject,
@@ -748,9 +873,46 @@ namespace Subspace.Editor
             image.raycastTarget = true;
             var button = image.gameObject.AddComponent<Button>();
             button.targetGraphic = image;
+            image.gameObject.AddComponent<SubspaceButtonAudio>();
             var text = CreateText(image.transform, "Label", label, 24, Color.white, TextAnchor.MiddleCenter);
             Stretch(text.rectTransform);
             return button;
+        }
+
+        private static Slider CreateSlider(Transform parent, string name, float value, Color fillColor)
+        {
+            var sliderObject = CreateChild(parent, name, typeof(RectTransform), typeof(Slider));
+            var slider = sliderObject.GetComponent<Slider>();
+            slider.minValue = 0f;
+            slider.maxValue = 1f;
+            slider.value = Mathf.Clamp01(value);
+
+            var background = CreatePanel(sliderObject.transform, "Background", new Color(0.16f, 0.18f, 0.2f, 1f), false);
+            Stretch(background.rectTransform);
+            background.raycastTarget = true;
+
+            var fillArea = CreateChild(sliderObject.transform, "Fill Area", typeof(RectTransform));
+            var fillAreaRect = fillArea.GetComponent<RectTransform>();
+            Stretch(fillAreaRect);
+            fillAreaRect.offsetMin = new Vector2(6f, 0f);
+            fillAreaRect.offsetMax = new Vector2(-6f, 0f);
+
+            var fill = CreatePanel(fillArea.transform, "Fill", fillColor, false);
+            Stretch(fill.rectTransform);
+
+            var handleArea = CreateChild(sliderObject.transform, "Handle Slide Area", typeof(RectTransform));
+            var handleAreaRect = handleArea.GetComponent<RectTransform>();
+            Stretch(handleAreaRect);
+            handleAreaRect.offsetMin = new Vector2(8f, -6f);
+            handleAreaRect.offsetMax = new Vector2(-8f, 6f);
+
+            var handle = CreatePanel(handleArea.transform, "Handle", Color.white, true);
+            SetLowerLeft(handle.rectTransform, 0f, -6f, 18f, 34f);
+
+            slider.fillRect = fill.rectTransform;
+            slider.handleRect = handle.rectTransform;
+            slider.targetGraphic = handle;
+            return slider;
         }
 
         private static Image CreatePanel(Transform parent, string name, Color color, bool addOutline)
@@ -790,6 +952,11 @@ namespace Subspace.Editor
             gameObject.transform.SetParent(parent, false);
             Undo.RegisterCreatedObjectUndo(gameObject, "Create Subspace Scene Object");
             return gameObject;
+        }
+
+        private static AudioClip LoadAudioClip(string path)
+        {
+            return AssetDatabase.LoadAssetAtPath<AudioClip>(path);
         }
 
         private static void Stretch(RectTransform rect)
@@ -996,7 +1163,9 @@ namespace Subspace.Editor
            public SubspaceGameDirector director;
            public SubspaceBriefingController briefing;
            public SubspaceMenuController menu;
+           public SubspacePauseMenuController pauseMenu;
            public SubspaceUIController ui;
+           public SubspaceAudioController audio;
             public SubspaceBoardController board;
             public SubspaceSelectionController selection;
             public SubspaceActorController player;
@@ -1017,6 +1186,12 @@ namespace Subspace.Editor
            public SubspaceMenuController controller;
        }
 
+       private sealed class PauseMenuParts
+       {
+           public GameObject root;
+           public SubspacePauseMenuController controller;
+       }
+
        private sealed class GameParts
         {
             public GameObject root;
@@ -1027,6 +1202,7 @@ namespace Subspace.Editor
             public Text turnText;
             public Text roundScoreText;
             public Text detailText;
+            public Text upgradeText;
             public Image hpFill;
             public Button attackButton;
             public GameObject boardObject;

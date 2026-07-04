@@ -14,8 +14,10 @@ namespace Subspace
         [SerializeField] private Text turnText;
         [SerializeField] private Text roundScoreText;
         [SerializeField] private Text detailText;
+        [SerializeField] private Text upgradeText;
         [SerializeField] private Image hpFill;
         [SerializeField] private Button attackButton;
+        [SerializeField] private SubspaceAudioController audioController;
         [SerializeField] private GameObject messageRoot;
         [SerializeField] private Text messageTitleText;
         [SerializeField] private Text messageBodyText;
@@ -57,6 +59,20 @@ namespace Subspace
             textConfig = config != null ? config : SubspaceTextConfig.RuntimeDefault;
         }
 
+        public void SetUpgradeText(Text text)
+        {
+            upgradeText = text;
+        }
+
+        public void SetAudioController(SubspaceAudioController controller)
+        {
+            audioController = controller;
+            if (audioController != null)
+            {
+                audioController.RegisterButton(attackButton, true, false);
+            }
+        }
+
         public void ShowGame(bool show)
         {
             if (gameRoot != null)
@@ -84,7 +100,13 @@ namespace Subspace
             }
         }
 
-        public void Refresh(SubspaceLevelDefinition level, int totalScore, int remainingTurns, int lastRoundScore, IReadOnlyList<string> scoreLines)
+        public void Refresh(
+            SubspaceLevelDefinition level,
+            int totalScore,
+            int remainingTurns,
+            int lastRoundScore,
+            IReadOnlyList<string> scoreLines,
+            IReadOnlyList<SubspaceUpgradeDefinition> activeUpgrades = null)
         {
             if (levelText != null)
             {
@@ -122,6 +144,34 @@ namespace Subspace
             {
                 hpFill.fillAmount = Mathf.Clamp01(totalScore / (float)level.SafeTargetScore);
             }
+
+            RefreshUpgrades(activeUpgrades);
+        }
+
+        public void RefreshUpgrades(IReadOnlyList<SubspaceUpgradeDefinition> activeUpgrades)
+        {
+            EnsureUpgradeText();
+            if (upgradeText == null)
+            {
+                return;
+            }
+
+            if (activeUpgrades == null || activeUpgrades.Count == 0)
+            {
+                upgradeText.text = "\u5df2\u9009\u5347\u7ea7\n-";
+                return;
+            }
+
+            var names = new List<string>();
+            foreach (var upgrade in activeUpgrades)
+            {
+                if (upgrade != null)
+                {
+                    names.Add(upgrade.displayName);
+                }
+            }
+
+            upgradeText.text = names.Count == 0 ? "\u5df2\u9009\u5347\u7ea7\n-" : $"\u5df2\u9009\u5347\u7ea7\n{string.Join("\n", names)}";
         }
 
         public void ShowMessage(string title, string body, string buttonLabel, UnityAction onClick)
@@ -156,6 +206,33 @@ namespace Subspace
             {
                 messageRoot.SetActive(false);
             }
+        }
+
+        private void EnsureUpgradeText()
+        {
+            if (upgradeText != null || gameRoot == null)
+            {
+                return;
+            }
+
+            var textObject = new GameObject("SelectedUpgradesText", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
+            textObject.transform.SetParent(gameRoot.transform, false);
+
+            upgradeText = textObject.GetComponent<Text>();
+            upgradeText.font = Font.CreateDynamicFontFromOSFont(new[] { "Microsoft YaHei", "SimHei", "Arial" }, 16);
+            upgradeText.fontSize = 16;
+            upgradeText.alignment = TextAnchor.UpperLeft;
+            upgradeText.color = new Color(0.92f, 0.95f, 1f, 1f);
+            upgradeText.raycastTarget = false;
+            upgradeText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            upgradeText.verticalOverflow = VerticalWrapMode.Truncate;
+
+            var rect = upgradeText.rectTransform;
+            rect.anchorMin = new Vector2(1f, 0f);
+            rect.anchorMax = new Vector2(1f, 0f);
+            rect.pivot = new Vector2(1f, 0f);
+            rect.anchoredPosition = new Vector2(-26f, 145f);
+            rect.sizeDelta = new Vector2(224f, 120f);
         }
 
         private SubspaceTextConfig TextConfig => textConfig != null ? textConfig : SubspaceTextConfig.RuntimeDefault;

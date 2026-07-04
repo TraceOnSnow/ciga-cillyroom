@@ -12,6 +12,16 @@ namespace Subspace
        public string menuTitle = "\u4e9a\u7a7a\u95f4";
        public string menuSubtitle = "\u6846\u9009\u00b7\u7ed3\u7b97\u00b7\u57f9\u517b\u5730\u5757";
        public string menuStartButtonText = "\u5f00\u59cb\u63a2\u7d22";
+       public string menuSettingsButtonText = "\u6e38\u620f\u8bbe\u7f6e";
+       public string menuExitButtonText = "\u9000\u51fa\u6e38\u620f";
+       public string settingsTitleText = "\u6e38\u620f\u8bbe\u7f6e";
+       public string musicVolumeText = "\u80cc\u666f\u97f3\u4e50";
+       public string sfxVolumeText = "\u97f3\u6548";
+       public string settingsCloseButtonText = "\u8fd4\u56de";
+       public string pauseTitleText = "\u9009\u9879";
+       public string pauseResumeButtonText = "\u7ee7\u7eed";
+       public string pauseMainMenuButtonText = "\u56de\u5230\u4e3b\u83dc\u5355";
+       public string pauseExitButtonText = "\u9000\u51fa\u6e38\u620f";
 
        [Header("Briefing")]
         public string briefingFallbackTitle = "任务简报";

@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76b63b9057b9430988e4c13e6d555b8a, type: 3}
+  m_Name: Scanner_Cross
+  m_EditorClassIdentifier: 
+  upgradeId: scanner_cross
+  displayName: "\u5341\u5B57\u626B\u63CF\u5668"
+  description: "\u626B\u63CF\u8303\u56F4\u53D8\u4E3A\u5341\u5B57\u5F62\u3002"
+  type: 0
+  shapeOffsets:
+  - {x: 1, y: 0}
+  - {x: 0, y: 1}
+  - {x: 1, y: 1}
+  - {x: 2, y: 1}
+  - {x: 1, y: 2}
+  floatParam: 0
+  intParam: 0

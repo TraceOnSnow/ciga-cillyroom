@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76b63b9057b9430988e4c13e6d555b8a, type: 3}
+  m_Name: Resource_Boost
+  m_EditorClassIdentifier: 
+  upgradeId: resource_boost_20
+  displayName: "\u8D44\u6E90\u52A0\u6210"
+  description: "\u6240\u6709\u8D44\u6E90\u5143\u7D20\u5373\u65F6\u5F97\u5206 +20%\u3002"
+  type: 2
+  shapeOffsets: []
+  floatParam: 0.2
+  intParam: 0

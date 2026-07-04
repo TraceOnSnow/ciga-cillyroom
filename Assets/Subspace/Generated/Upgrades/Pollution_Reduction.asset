@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76b63b9057b9430988e4c13e6d555b8a, type: 3}
+  m_Name: Pollution_Reduction
+  m_EditorClassIdentifier: 
+  upgradeId: pollution_reduction_50
+  displayName: "\u6C61\u67D3\u51C0\u5316"
+  description: "Debuff \u9020\u6210\u7684\u8D1F\u5206\u964D\u4F4E 50%\u3002"
+  type: 4
+  shapeOffsets: []
+  floatParam: 0.5
+  intParam: 0

@@ -24,3 +24,12 @@ MonoBehaviour:
   levels:
   - {fileID: 11400000, guid: f4b0152ae6254c4eb3794130e351231a, type: 2}
   - {fileID: 11400000, guid: 0b5f9685f55544edae795965c6131b9f, type: 2}
+  upgradePool:
+  - {fileID: 11400000, guid: 1f6ff35a00a04a7abc09638f1bc2e116, type: 2}
+  - {fileID: 11400000, guid: 8fd33abbf5c345338c90a859aa2eeae4, type: 2}
+  - {fileID: 11400000, guid: b6fdf194c55f4d588824283d2a355162, type: 2}
+  - {fileID: 11400000, guid: 5f8c4c7874f4472cb36d9271205c0870, type: 2}
+  - {fileID: 11400000, guid: 6ff7096c1fbd4d45a8143ff04734be9a, type: 2}
+  - {fileID: 11400000, guid: 9ba6bec522254283933f0615a3328024, type: 2}
+  - {fileID: 11400000, guid: 7c350ca13ec94328b5e144640b11630a, type: 2}
+  - {fileID: 11400000, guid: 1b9711e7f7bb40c1b906d6f1c2796de8, type: 2}
