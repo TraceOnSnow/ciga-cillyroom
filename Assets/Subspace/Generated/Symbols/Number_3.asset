@@ -15,7 +15,9 @@ MonoBehaviour:
   symbolId: anchor
   displayName: "\u951A\u70B9"
   kind: 3
-  baseScore: 5
+  category: 1
+  rarity: 1
+  baseScore: 15
   tintColor: {r: 0.44, g: 0.82, b: 0.36, a: 1}
   artwork: {fileID: 21300000, guid: 53a16a48c854b624f9f8c2aa0d93740a, type: 3}
   effect: 0

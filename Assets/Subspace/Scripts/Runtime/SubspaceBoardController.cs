@@ -216,7 +216,8 @@ namespace Subspace
             Canvas.ForceUpdateCanvases();
             float width = boardRect.rect.width > 1f ? boardRect.rect.width : boardRect.sizeDelta.x;
             float height = boardRect.rect.height > 1f ? boardRect.rect.height : boardRect.sizeDelta.y;
-            gridLayout.cellSize = new Vector2(width / columns, height / rows);
+            float cellSize = Mathf.Floor(Mathf.Min(width / columns, height / rows));
+            gridLayout.cellSize = new Vector2(cellSize, cellSize);
             gridLayout.spacing = Vector2.zero;
         }
 

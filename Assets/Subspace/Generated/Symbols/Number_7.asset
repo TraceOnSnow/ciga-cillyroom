@@ -15,7 +15,9 @@ MonoBehaviour:
   symbolId: cosmic_dust
   displayName: "\u5B87\u5B99\u5C18\u57C3"
   kind: 7
-  baseScore: 0
+  category: 0
+  rarity: 0
+  baseScore: 10
   tintColor: {r: 0.56, g: 0.62, b: 0.68, a: 1}
   artwork: {fileID: 21300000, guid: 53a16a48c854b624f9f8c2aa0d93740a, type: 3}
   effect: 0

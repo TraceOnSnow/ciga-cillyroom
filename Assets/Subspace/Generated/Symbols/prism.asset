@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9009cbc6fd835f04eaaa7a285ae43530, type: 3}
+  m_Name: prism
+  m_EditorClassIdentifier: 
+  symbolId: prism
+  displayName: "\u68F1\u955C"
+  kind: 13
+  category: 0
+  rarity: 1
+  baseScore: 6
+  tintColor: {r: 0.72, g: 0.84, b: 1, a: 1}
+  artwork: {fileID: 21300000, guid: 72cf9c8e4f232ec48b27826609befc34, type: 3}
+  effect: 0
+  effectMultiplier: 2
+  effectIncludesDiagonals: 1
+  synergyTag: 
+  synergyBonus: 0
+  synergyWith: 

@@ -244,6 +244,7 @@ namespace Subspace
         {
             if (root == null)
             {
+                CreateRuntimeMenu();
                 return;
             }
 
@@ -261,6 +262,25 @@ namespace Subspace
             {
                 CreateRuntimeSettingsPanel();
             }
+        }
+
+        private void CreateRuntimeMenu()
+        {
+            var parent = GetComponentInParent<Canvas>() != null ? GetComponentInParent<Canvas>().transform : transform;
+            var panel = CreateRuntimePanel(parent, "Menu Screen", new Color(0.02f, 0.025f, 0.03f, 0.95f), Vector2.zero, Vector2.zero, Vector2.zero);
+            root = panel.gameObject;
+            Stretch(panel.rectTransform);
+
+            background = CreateRuntimePanel(root.transform, "Menu Background", Color.clear, Vector2.zero, Vector2.zero, Vector2.zero);
+            Stretch(background.rectTransform);
+            background.raycastTarget = false;
+
+            titleText = CreateRuntimeText(root.transform, "Menu Title", 64, Color.white, TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0f, 118f), new Vector2(620f, 82f));
+            subtitleText = CreateRuntimeText(root.transform, "Menu Subtitle", 28, new Color(0.7f, 0.78f, 0.86f, 1f), TextAnchor.MiddleCenter, new Vector2(0.5f, 0.5f), new Vector2(0f, 52f), new Vector2(560f, 44f));
+            startButton = CreateRuntimeButton(root.transform, "Start Button", new Vector2(0.5f, 0.5f), new Vector2(0f, -32f), new Vector2(280f, 68f));
+            settingsButton = CreateRuntimeButton(root.transform, "Settings Button", new Vector2(0.5f, 0.5f), new Vector2(0f, -112f), new Vector2(240f, 58f));
+            exitButton = CreateRuntimeButton(root.transform, "Exit Button", new Vector2(0.5f, 0.5f), new Vector2(0f, -184f), new Vector2(240f, 58f));
+            CreateRuntimeSettingsPanel();
         }
 
         private void CreateRuntimeSettingsPanel()
@@ -381,6 +401,15 @@ namespace Subspace
             slider.handleRect = handle.rectTransform;
             background.raycastTarget = true;
             return slider;
+        }
+
+        private static void Stretch(RectTransform rect)
+        {
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            rect.pivot = new Vector2(0.5f, 0.5f);
         }
 
         private SubspaceTextConfig TextConfig => textConfig != null ? textConfig : SubspaceTextConfig.RuntimeDefault;

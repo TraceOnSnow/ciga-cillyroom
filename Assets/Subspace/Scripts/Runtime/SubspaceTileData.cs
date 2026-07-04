@@ -124,28 +124,50 @@ namespace Subspace
 
             switch (data.type)
             {
+                case SubspaceSymbolKind.Beacon:
+                    data.displayName = Text.Crystal;
+                    data.description = Text.CrystalDescription;
+                    data.instantScore = 20;
+                    break;
                 case SubspaceSymbolKind.Anchor:
                     data.displayName = Text.Anchor;
                     data.description = Text.AnchorDescription;
-                    data.instantScore = 5;
+                    data.instantScore = 15;
+                    data.tileEffects.Add(new SubspaceTileEffect(SubspaceTileEffectType.AddBaseBonus, 3, sourceName: data.displayName));
                     break;
                 case SubspaceSymbolKind.LifeSignal:
                     data.displayName = Text.LifeSignal;
                     data.description = Text.LifeSignalDescription;
-                    data.instantScore = 0;
-                    data.tileEffects.Add(new SubspaceTileEffect(SubspaceTileEffectType.AddBaseBonus, 1, sourceName: data.displayName));
+                    data.instantScore = 8;
+                    data.tileEffects.Add(new SubspaceTileEffect(SubspaceTileEffectType.AddBaseBonus, 2, sourceName: data.displayName));
                     break;
                 case SubspaceSymbolKind.EnergyCore:
                     data.displayName = Text.EnergyCore;
                     data.description = Text.EnergyCoreDescription;
-                    data.instantScore = 3;
+                    data.instantScore = 25;
                     data.tileEffects.Add(new SubspaceTileEffect(SubspaceTileEffectType.AddBuff, buffType: SubspaceTileBuffType.EnergyRich, sourceName: data.displayName));
                     break;
                 case SubspaceSymbolKind.Turbulence:
                     data.displayName = Text.Turbulence;
                     data.description = Text.TurbulenceDescription;
-                    data.instantScore = 8;
+                    data.instantScore = 45;
                     data.tileEffects.Add(new SubspaceTileEffect(SubspaceTileEffectType.AddDebuff, buffType: SubspaceTileBuffType.SpacePollution, sourceName: data.displayName));
+                    break;
+                case SubspaceSymbolKind.SubspaceRift:
+                    data.displayName = Text.SubspaceRift;
+                    data.description = Text.SubspaceRiftDescription;
+                    data.instantScore = -20;
+                    data.tileEffects.Add(new SubspaceTileEffect(SubspaceTileEffectType.AddDebuff, buffType: SubspaceTileBuffType.SpacePollution, sourceName: data.displayName));
+                    break;
+                case SubspaceSymbolKind.CosmicDust:
+                    data.displayName = Text.CosmicDust;
+                    data.description = Text.CosmicDustDescription;
+                    data.instantScore = 10;
+                    break;
+                case SubspaceSymbolKind.RealitySingularity:
+                    data.displayName = Text.RealitySingularity;
+                    data.description = Text.RealitySingularityDescription;
+                    data.instantScore = 35;
                     break;
             }
 
@@ -341,15 +363,23 @@ namespace Subspace
             public const string EmptyTileDescription = "\u5f53\u524d\u6ca1\u6709\u7b26\u53f7\u3002";
             public const string PrototypeSymbolDescription = "\u4e34\u65f6\u7b26\u53f7\u3002\u4e4b\u540e\u53ef\u4ee5\u8fc1\u79fb\u5230 ScriptableObject \u914d\u7f6e\u3002";
             public const string Anchor = "\u951a\u70b9";
+            public const string Crystal = "\u6676\u4f53";
             public const string LifeSignal = "\u751f\u547d\u4fe1\u53f7";
             public const string EnergyCore = "\u80fd\u91cf\u6838\u5fc3";
             public const string Turbulence = "\u4e71\u6d41";
+            public const string SubspaceRift = "\u4e9a\u7a7a\u95f4\u88c2\u7f1d";
+            public const string CosmicDust = "\u5b87\u5b99\u5c18\u57c3";
+            public const string RealitySingularity = "\u73b0\u5b9e\u5947\u70b9";
             public const string EnergyRich = "\u80fd\u91cf\u5bcc\u96c6";
             public const string SpacePollution = "\u7a7a\u95f4\u6c61\u67d3";
             public const string AnchorDescription = "\u7a33\u5b9a\u53ef\u9760\u7684\u5373\u65f6\u5f97\u5206\u7b26\u53f7\u3002";
+            public const string CrystalDescription = "\u8d44\u6e90\u5143\u7d20\u3002\u4e0e\u80fd\u91cf\u6838\u5fc3\u540c\u65f6\u626b\u63cf\u65f6\u89e6\u53d1\u8054\u52a8\u3002";
             public const string LifeSignalDescription = "\u9002\u5408\u957f\u671f\u57f9\u517b\u5730\u5757\u3002";
             public const string EnergyCoreDescription = "\u8ba9\u6240\u5728\u5730\u5757\u83b7\u5f97\u6301\u7eed\u52a0\u5206\u3002";
             public const string TurbulenceDescription = "\u5373\u65f6\u5f97\u5206\u9ad8\uff0c\u4f46\u4f1a\u6c61\u67d3\u6240\u5728\u5730\u5757\u3002";
+            public const string SubspaceRiftDescription = "\u538b\u529b\u5143\u7d20\u3002\u4f1a\u964d\u4f4e\u672c\u6b21\u5f97\u5206\u5e76\u6c61\u67d3\u5730\u5757\u3002";
+            public const string CosmicDustDescription = "\u5e38\u89c1\u8d44\u6e90\u5143\u7d20\u3002";
+            public const string RealitySingularityDescription = "\u7a00\u6709\u8d44\u6e90\u5143\u7d20\u3002";
             public const string EnergyRichEffect = "\u8be5\u5730\u5757\u7ed3\u7b97\u65f6 +1 \u5206";
             public const string SpacePollutionEffect = "\u8be5\u5730\u5757\u7ed3\u7b97\u65f6 -1 \u5206";
             public const string AddBaseBonus = "\u8be5\u5730\u5757\u57fa\u7840\u5206 +{0}";

@@ -15,7 +15,9 @@ MonoBehaviour:
   symbolId: turbulence
   displayName: "\u4E71\u6D41"
   kind: 5
-  baseScore: 8
+  category: 2
+  rarity: 0
+  baseScore: 45
   tintColor: {r: 0.87, g: 0.44, b: 0.92, a: 1}
   artwork: {fileID: 21300000, guid: 53a16a48c854b624f9f8c2aa0d93740a, type: 3}
   effect: 0

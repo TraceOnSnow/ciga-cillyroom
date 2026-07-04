@@ -15,12 +15,14 @@ MonoBehaviour:
   symbolId: energy_core
   displayName: "\u80FD\u91CF\u6838\u5FC3"
   kind: 4
-  baseScore: 3
+  category: 0
+  rarity: 1
+  baseScore: 25
   tintColor: {r: 0.98, g: 0.58, b: 0.24, a: 1}
   artwork: {fileID: 21300000, guid: 53a16a48c854b624f9f8c2aa0d93740a, type: 3}
   effect: 0
   effectMultiplier: 2
   effectIncludesDiagonals: 1
-  synergyTag: 
-  synergyBonus: 0
-  synergyWith: 
+  synergyTag: crystal_energy
+  synergyBonus: 5
+  synergyWith: beacon

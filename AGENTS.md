@@ -16,14 +16,11 @@
 
 ## 架构要点（改代码前必读）
 
-项目里有**两套**游戏控制器，改之前必须确认场景里实际跑的是哪一套：
+项目里只保留**组件化版**游戏控制器作为运行入口：
 
-1. **旧单体控制器** `SubspaceGameController`：一个大 MonoBehaviour 自己建 UI、管网格、结算、刷新。当前 `SampleScene` 实际运行的就是它。格子 UI 用 `Image`/`Text` 列表，不挂 `SubspaceSymbolCellView`。
-2. **组件化版** `SubspaceGameDirector` + `SubspaceBoardController` + `SubspaceUIController` + `SubspaceSelectionController` + `SubspaceSymbolCellView` 等：各司其职，由编辑器生成器 `SubspaceGeneratorWindow` 搭建。当前场景没有使用它。
+1. **组件化版** `SubspaceGameDirector` + `SubspaceBoardController` + `SubspaceUIController` + `SubspaceSelectionController` + `SubspaceSymbolCellView` 等：各司其职，由编辑器生成器 `SubspaceGeneratorWindow` 搭建。当前 `SampleScene` 使用它。
 
-**陷阱**：改了组件版但场景跑的是旧版，会导致改动完全不生效。改之前先用 Unity MCP 在运行时确认 `FindObjectOfType` 的结果，或者直接问用户"你要改哪一套"。
-
-数据层（地块培养系统）已抽象为 `SubspaceTileData` / `SubspaceSymbolData` / `SubspaceTileBuffInstance`，规则集中在 `SubspaceTileRulebook`。结算入口是 `SubspaceScoreResolver.Calculate`，有符号数组和地块数组两个重载。
+**注意**：旧单体入口已经移除。改入口相关逻辑时优先检查 `SubspaceGameDirector` 及其组件引用，必要时用 Unity MCP 在运行时确认 `FindObjectOfType<SubspaceGameDirector>()`。
 
 ## 工作风格（最重要）
 
@@ -73,7 +70,6 @@
 
 - `SampleScene` 里有一个 `The referenced script (Unknown) on this Behaviour is missing!` 警告，是历史遗留，未处理。
 - 仓库里有大量未提交的改动（Unity 自动导入、Spine 资产、之前任务的产物），这些不是本次任务的产物，不要回滚。
-- 旧单体 `SubspaceGameController` 的 `AutoCreateController` 已被禁用，保留只为旧场景兼容。
 
 ## 设计理解（基于 docs/design-doc.md，持续迭代）
 

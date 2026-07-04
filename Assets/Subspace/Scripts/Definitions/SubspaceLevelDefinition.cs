@@ -4,6 +4,15 @@ using Spine.Unity;
 
 namespace Subspace
 {
+    public enum SubspaceMonsterPressureType
+    {
+        None,
+        SpreadPollution,
+        ErodeStrongestTile,
+        JamScanner,
+        CollapseAnchors
+    }
+
     [CreateAssetMenu(menuName = "Subspace/Level", fileName = "SubspaceLevel")]
     public sealed class SubspaceLevelDefinition : ScriptableObject
     {
@@ -19,6 +28,12 @@ namespace Subspace
         public int boardRows = 5;
         public int selectionWidth = 2;
         public int selectionHeight = 2;
+
+        [Header("Monster")]
+        public string monsterId = "subspace_larva";
+        public string monsterDisplayName = "\u4e9a\u7a7a\u95f4\u5e7c\u4f53";
+        public SubspaceMonsterPressureType monsterPressureType = SubspaceMonsterPressureType.SpreadPollution;
+        public int monsterPressureAmount = 1;
 
         [Header("Optional Art Overrides")]
         public Sprite briefingBackgroundOverride;

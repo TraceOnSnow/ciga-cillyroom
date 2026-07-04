@@ -21,6 +21,7 @@ namespace Subspace.Editor
         private const string AnimatorsFolder = GeneratedFolder + "/Animators";
         private const string MusicFolder = "Assets/Art/Audio/Music";
         private const string SfxFolder = "Assets/Art/Audio/SFX";
+        private const string SymbolIconFolder = "Assets/Art/Land/图标";
         private const string DisappearPrefabPath = "Assets/Art/Land/Disappear.prefab";
         private const string MonsterOneSkeletonPath = "Assets/Art/Monster/Monster_1/MONSTER1_SkeletonData.asset";
         private const string MonsterOneMaterialPath = "Assets/Art/Monster/Monster_1/MONSTER1_Material.mat";
@@ -58,12 +59,11 @@ namespace Subspace.Editor
         {
            EnsureFolders();
            EnsureEventSystem();
-           DisableLegacyController();
 
            var artSet = CreateArtSet();
             var textConfig = CreateTextConfig();
             var symbols = CreateSymbols();
-           var levels = CreateLevels(symbols[5], symbols[6], symbols[7]);
+           var levels = CreateLevels(symbols);
            var upgrades = CreateUpgrades();
            var config = CreateConfig(artSet, textConfig, symbols, levels, upgrades);
             var playerAnimatorController = CreateActorAnimatorController("PlayerActor.controller");
@@ -128,41 +128,113 @@ namespace Subspace.Editor
         {
             return new List<SubspaceSymbolDefinition>
             {
-                CreateElementSymbol(1, "beacon", "信标", SubspaceSymbolKind.Beacon, 3, new Color(0.88f, 0.88f, 0.88f, 1f)),
-                CreateElementSymbol(2, "life_signal", "生命信号", SubspaceSymbolKind.LifeSignal, 0, new Color(0.32f, 0.66f, 0.98f, 1f)),
-                CreateElementSymbol(3, "anchor", "锚点", SubspaceSymbolKind.Anchor, 5, new Color(0.44f, 0.82f, 0.36f, 1f)),
-                CreateElementSymbol(4, "energy_core", "能量核心", SubspaceSymbolKind.EnergyCore, 3, new Color(0.98f, 0.58f, 0.24f, 1f)),
-                CreateElementSymbol(5, "turbulence", "乱流", SubspaceSymbolKind.Turbulence, 8, new Color(0.87f, 0.44f, 0.92f, 1f)),
-                CreateElementSymbol(6, "subspace_rift", "亚空间裂缝", SubspaceSymbolKind.SubspaceRift, -5, new Color(0.96f, 0.22f, 0.5f, 1f)),
-                CreateElementSymbol(7, "cosmic_dust", "宇宙尘埃", SubspaceSymbolKind.CosmicDust, 0, new Color(0.56f, 0.62f, 0.68f, 1f)),
-                CreateElementSymbol(8, "reality_singularity", "现实奇点", SubspaceSymbolKind.RealitySingularity, 0, new Color(1f, 0.72f, 0.18f, 1f))
+                CreateElementSymbol(1, "signal_node", "信号节点", SubspaceSymbolKind.SignalNode, SubspaceElementCategory.Resource, SubspaceElementRarity.Common, 10, new Color(0.38f, 0.78f, 0.96f, 1f)),
+                CreateElementSymbol(2, "data", "数据", SubspaceSymbolKind.Data, SubspaceElementCategory.Resource, SubspaceElementRarity.Common, 12, new Color(0.42f, 0.68f, 1f, 1f)),
+                CreateElementSymbol(3, "gravity_flow", "引力流", SubspaceSymbolKind.GravityFlow, SubspaceElementCategory.Resource, SubspaceElementRarity.Common, 14, new Color(0.5f, 0.72f, 0.92f, 1f)),
+                CreateElementSymbol(4, "chaos_signal", "混乱信号", SubspaceSymbolKind.ChaosSignal, SubspaceElementCategory.Resource, SubspaceElementRarity.Common, 10, new Color(0.86f, 0.46f, 0.9f, 1f)),
+                CreateElementSymbol(5, "void_signal", "虚无信号", SubspaceSymbolKind.VoidSignal, SubspaceElementCategory.Resource, SubspaceElementRarity.Common, 20, new Color(0.55f, 0.55f, 0.66f, 1f)),
+                CreateElementSymbol(6, "torn_space", "撕裂空间", SubspaceSymbolKind.TornSpace, SubspaceElementCategory.Resource, SubspaceElementRarity.Uncommon, 30, new Color(0.9f, 0.36f, 0.44f, 1f)),
+                CreateElementSymbol(7, "overclock", "超频", SubspaceSymbolKind.Overclock, SubspaceElementCategory.Resource, SubspaceElementRarity.Uncommon, 30, new Color(0.96f, 0.58f, 0.24f, 1f)),
+                CreateElementSymbol(8, "prism", "棱镜", SubspaceSymbolKind.Prism, SubspaceElementCategory.Resource, SubspaceElementRarity.Uncommon, 6, new Color(0.72f, 0.84f, 1f, 1f)),
+                CreateElementSymbol(9, "energy_shard", "能量碎片", SubspaceSymbolKind.EnergyShard, SubspaceElementCategory.Resource, SubspaceElementRarity.Uncommon, 10, new Color(1f, 0.78f, 0.28f, 1f)),
+                CreateElementSymbol(10, "multidimensional_analysis", "多维分析", SubspaceSymbolKind.MultidimensionalAnalysis, SubspaceElementCategory.Resource, SubspaceElementRarity.Uncommon, 6, new Color(0.48f, 0.9f, 0.74f, 1f)),
+                CreateElementSymbol(11, "resonance_signal", "共振信号", SubspaceSymbolKind.ResonanceSignal, SubspaceElementCategory.Resource, SubspaceElementRarity.Uncommon, 8, new Color(0.68f, 0.62f, 1f, 1f)),
+                CreateElementSymbol(12, "blocking_signal", "阻塞信号", SubspaceSymbolKind.BlockingSignal, SubspaceElementCategory.Resource, SubspaceElementRarity.Uncommon, 30, new Color(0.4f, 0.45f, 0.5f, 1f)),
+                CreateElementSymbol(13, "energy_transition", "能量跃迁", SubspaceSymbolKind.EnergyTransition, SubspaceElementCategory.Resource, SubspaceElementRarity.Epic, 5, new Color(1f, 0.92f, 0.35f, 1f)),
+                CreateElementSymbol(14, "reality_anchor", "现实锚点", SubspaceSymbolKind.RealityAnchor, SubspaceElementCategory.Anchor, SubspaceElementRarity.Common, 0, new Color(0.44f, 0.86f, 0.48f, 1f)),
+                CreateElementSymbol(15, "magnetic_field", "磁场", SubspaceSymbolKind.MagneticField, SubspaceElementCategory.Anchor, SubspaceElementRarity.Common, 2, new Color(0.34f, 0.72f, 0.76f, 1f)),
+                CreateElementSymbol(16, "signal_conversion", "信号转换", SubspaceSymbolKind.SignalConversion, SubspaceElementCategory.Anchor, SubspaceElementRarity.Common, 3, new Color(0.42f, 0.76f, 0.95f, 1f)),
+                CreateElementSymbol(17, "signal_enhancer", "信号加强器", SubspaceSymbolKind.SignalEnhancer, SubspaceElementCategory.Anchor, SubspaceElementRarity.Common, 3, new Color(0.3f, 0.82f, 0.62f, 1f)),
+                CreateElementSymbol(18, "signal_boost_point", "信号加强点", SubspaceSymbolKind.SignalBoostPoint, SubspaceElementCategory.Anchor, SubspaceElementRarity.Uncommon, 2, new Color(0.32f, 0.88f, 0.72f, 1f)),
+                CreateElementSymbol(19, "growth_node", "成长节点", SubspaceSymbolKind.GrowthNode, SubspaceElementCategory.Anchor, SubspaceElementRarity.Uncommon, 2, new Color(0.54f, 0.9f, 0.38f, 1f)),
+                CreateElementSymbol(20, "reality_link", "现实链接", SubspaceSymbolKind.RealityLink, SubspaceElementCategory.Anchor, SubspaceElementRarity.Uncommon, 1, new Color(0.52f, 0.78f, 1f, 1f)),
+                CreateElementSymbol(21, "signal_sacrifice", "信号献祭", SubspaceSymbolKind.SignalSacrifice, SubspaceElementCategory.Anchor, SubspaceElementRarity.Uncommon, 1, new Color(0.9f, 0.52f, 0.48f, 1f)),
+                CreateElementSymbol(22, "data_flow", "数据流", SubspaceSymbolKind.DataFlow, SubspaceElementCategory.Anchor, SubspaceElementRarity.Uncommon, 2, new Color(0.46f, 0.62f, 1f, 1f)),
+                CreateElementSymbol(23, "stable_field", "稳定场", SubspaceSymbolKind.StableField, SubspaceElementCategory.Anchor, SubspaceElementRarity.Uncommon, 2, new Color(0.66f, 0.92f, 0.86f, 1f)),
+                CreateElementSymbol(24, "hot_core", "炎热核心", SubspaceSymbolKind.HotCore, SubspaceElementCategory.Anchor, SubspaceElementRarity.Uncommon, 3, new Color(1f, 0.46f, 0.26f, 1f)),
+                CreateElementSymbol(25, "chaos_field", "混乱场", SubspaceSymbolKind.ChaosField, SubspaceElementCategory.Anchor, SubspaceElementRarity.Uncommon, 2, new Color(0.8f, 0.42f, 0.86f, 1f)),
+                CreateElementSymbol(26, "double_excitation", "双重激发", SubspaceSymbolKind.DoubleExcitation, SubspaceElementCategory.Anchor, SubspaceElementRarity.Epic, 1, new Color(1f, 0.84f, 0.42f, 1f)),
+                CreateElementSymbol(27, "space_turbulence_field", "空间乱流", SubspaceSymbolKind.SpaceTurbulenceField, SubspaceElementCategory.Anchor, SubspaceElementRarity.Epic, 0, new Color(0.88f, 0.36f, 0.92f, 1f)),
+                CreateElementSymbol(28, "energy_element", "能量元素", SubspaceSymbolKind.EnergyElement, SubspaceElementCategory.Anchor, SubspaceElementRarity.Epic, 2, new Color(1f, 0.74f, 0.22f, 1f)),
+                CreateElementSymbol(29, "cosmic_prism", "宇宙棱镜", SubspaceSymbolKind.CosmicPrism, SubspaceElementCategory.Anchor, SubspaceElementRarity.Epic, 2, new Color(0.72f, 0.78f, 1f, 1f)),
+                CreateElementSymbol(30, "chaos_stance", "混乱立场", SubspaceSymbolKind.ChaosStance, SubspaceElementCategory.Anchor, SubspaceElementRarity.Epic, 0, new Color(0.72f, 0.26f, 0.82f, 1f))
             };
         }
 
-        private static List<SubspaceLevelDefinition> CreateLevels(SubspaceSymbolDefinition rewardA, SubspaceSymbolDefinition rewardB, SubspaceSymbolDefinition rewardC)
+        private static List<SubspaceLevelDefinition> CreateLevels(IReadOnlyList<SubspaceSymbolDefinition> symbols)
         {
             return new List<SubspaceLevelDefinition>
             {
                 CreateLevel(
                     "Level_01.asset",
                     "level_01",
-                    "第一关：资料室遭遇",
-                    "任务简报：资料室里出现了第一名敌人。你有 5 个回合，用下方框选区收集数字分数，累计达到 30 分即可击倒敌人。",
-                    30,
-                    5,
-                    rewardA,
-                    rewardB,
-                    rewardC),
+                    "第一关：幼体侵蚀",
+                    "任务简报：亚空间幼体开始污染局部地图。在有限回合内建立第一个现实锚点。",
+                    300,
+                    8,
+                    "subspace_larva",
+                    "亚空间幼体",
+                    SubspaceMonsterPressureType.SpreadPollution,
+                    1,
+                    symbols[5],
+                    symbols[6],
+                    symbols[7]),
                 CreateLevel(
                     "Level_02.asset",
                     "level_02",
-                    "第二关：走廊追击",
-                    "任务简报：敌人的血量条变厚了，但上一关带走的奖励数字会加入池子。继续框选数字，在 6 个回合内累计达到 48 分。",
-                    48,
-                    6,
-                    rewardA,
-                    rewardB,
-                    rewardC)
+                    "第二关：噬能团块",
+                    "任务简报：噬能团块会优先侵蚀高收益地块。利用资源联动撑过压力。",
+                    600,
+                    9,
+                    "energy_devourer",
+                    "噬能团块",
+                    SubspaceMonsterPressureType.ErodeStrongestTile,
+                    2,
+                    symbols[0],
+                    symbols[6],
+                    symbols[7]),
+                CreateLevel(
+                    "Level_03.asset",
+                    "level_03",
+                    "第三关：干扰者",
+                    "任务简报：干扰者会扰乱扫描路径，使地图成长变得不稳定。",
+                    900,
+                    10,
+                    "scanner_jammer",
+                    "扫描干扰者",
+                    SubspaceMonsterPressureType.JamScanner,
+                    2,
+                    symbols[1],
+                    symbols[3],
+                    symbols[7]),
+                CreateLevel(
+                    "Level_04.asset",
+                    "level_04",
+                    "第四关：锚点吞噬者",
+                    "任务简报：锚点吞噬者会削弱已经培养出的现实网络。",
+                    1200,
+                    11,
+                    "anchor_devourer",
+                    "锚点吞噬者",
+                    SubspaceMonsterPressureType.CollapseAnchors,
+                    1,
+                    symbols[2],
+                    symbols[3],
+                    symbols[7]),
+                CreateLevel(
+                    "Level_05.asset",
+                    "level_05",
+                    "第五关：亚空间核心",
+                    "任务简报：亚空间核心持续释放高强度污染。锁定最终现实坐标。",
+                    2000,
+                    12,
+                    "subspace_core",
+                    "亚空间核心",
+                    SubspaceMonsterPressureType.SpreadPollution,
+                    3,
+                    symbols[2],
+                    symbols[5],
+                    symbols[7])
             };
        }
 
@@ -233,7 +305,38 @@ namespace Subspace.Editor
                SubspaceUpgradeType.ExtraScan,
                intParam: 2);
 
-           return new List<SubspaceUpgradeDefinition> { scanner2x3, scanner3x3, crossShape, resourceBoost, anchorBoost, firstScanDouble, pollutionReduction, extraScan };
+            var overload = CreateUpgradeAsset($"{folder}/Overload.asset", "overload",
+                "\u8fc7\u8f7d",
+                "\u8d44\u6e90\u5143\u7d20\u5373\u65f6\u5f97\u5206 +10%\u3002",
+                SubspaceUpgradeType.ResourceScoreBoost,
+                floatParam: 0.1f);
+
+            var damageControl = CreateUpgradeAsset($"{folder}/Damage_Control.asset", "damage_control",
+                "\u5373\u65f6\u6b62\u635f",
+                "Debuff \u6548\u679c\u51cf\u534a\u3002",
+                SubspaceUpgradeType.PollutionReduction,
+                floatParam: 0.5f);
+
+            var doubleScan = CreateUpgradeAsset($"{folder}/Double_Scan.asset", "double_scan",
+                "\u53cc\u91cd\u626b\u63cf",
+                "\u6bcf\u56de\u5408\u53ef\u626b\u63cf\u4e24\u6b21\u3002",
+                SubspaceUpgradeType.ExtraScan,
+                intParam: 2);
+
+            return new List<SubspaceUpgradeDefinition>
+            {
+                scanner2x3,
+                scanner3x3,
+                crossShape,
+                resourceBoost,
+                anchorBoost,
+                firstScanDouble,
+                pollutionReduction,
+                extraScan,
+                overload,
+                damageControl,
+                doubleScan
+            };
        }
 
        private static SubspaceUpgradeDefinition CreateUpgradeAsset(
@@ -338,17 +441,14 @@ namespace Subspace.Editor
                         asset.randomSeed = 2026;
                     }
 
-                    if (!ContainsSameSymbols(asset.startingSymbols, symbols, 4, 1))
+                    if (asset.startingSymbols == null || asset.startingSymbols.Count != symbols.Count)
                     {
-                        asset.startingSymbols = new List<SubspaceSymbolDefinition>
-                        {
-                            symbols[1], symbols[2], symbols[3], symbols[4]
-                        };
+                        asset.startingSymbols = new List<SubspaceSymbolDefinition>(symbols);
                     }
 
-                   if (asset.levels == null || asset.levels.Count == 0)
+                   if (asset.levels == null || asset.levels.Count != levels.Count)
                    {
-                       asset.levels = new List<SubspaceLevelDefinition> { levels[0], levels[1] };
+                       asset.levels = new List<SubspaceLevelDefinition>(levels);
                    }
 
                    if (asset.upgradePool == null)
@@ -618,7 +718,7 @@ namespace Subspace.Editor
             SetLowerLeft(playerPanelTitle.rectTransform, 18f, 196f, 170f, 42f);
 
             var boardPanel = CreatePanel(root.transform, "Board Panel", artSet.boardColor, true);
-            SetLowerLeft(boardPanel.rectTransform, 250f, 45f, 710f, 475f);
+            SetLowerLeft(boardPanel.rectTransform, 250f, 45f, 475f, 475f);
             var gridObject = CreateChild(boardPanel.transform, "Board Grid", typeof(RectTransform), typeof(GridLayoutGroup));
             var gridRect = gridObject.GetComponent<RectTransform>();
             Stretch(gridRect);
@@ -776,7 +876,7 @@ namespace Subspace.Editor
             var rect = spineObject.GetComponent<RectTransform>();
             Stretch(rect);
             rect.anchoredPosition = new Vector2(0f, -24f);
-            rect.sizeDelta = new Vector2(220f, 150f);
+            rect.sizeDelta = new Vector2(180f, 180f);
 
             var components = SkeletonGraphic.AddSkeletonGraphicAnimationComponents(spineObject, LoadMonsterOneSkeleton(), LoadMonsterOneMaterial(), true);
             var graphic = components.skeletonRenderer;
@@ -985,21 +1085,63 @@ namespace Subspace.Editor
             return color;
         }
 
-        private static SubspaceSymbolDefinition CreateElementSymbol(int value, string symbolId, string displayName, SubspaceSymbolKind kind, int baseScore, Color color)
+        private static SubspaceSymbolDefinition CreateElementSymbol(
+            int value,
+            string symbolId,
+            string displayName,
+            SubspaceSymbolKind kind,
+            SubspaceElementCategory category,
+            SubspaceElementRarity rarity,
+            int baseScore,
+            Color color)
         {
             return CreateOrUpdateAsset<SubspaceSymbolDefinition>(
-                $"{SymbolsFolder}/Number_{value}.asset",
+                $"{SymbolsFolder}/{symbolId}.asset",
                 asset =>
                 {
                     asset.symbolId = symbolId;
                     asset.displayName = displayName;
                     asset.kind = kind;
+                    asset.category = category;
+                    asset.rarity = rarity;
                     asset.baseScore = baseScore;
                     asset.tintColor = color;
+                    asset.artwork = LoadSymbolArtwork(displayName);
                     asset.effect = SubspaceSymbolEffect.None;
                     asset.effectMultiplier = 2;
                     asset.effectIncludesDiagonals = true;
+                    asset.synergyTag = kind == SubspaceSymbolKind.Beacon || kind == SubspaceSymbolKind.EnergyCore ? SubspaceElementRules.CrystalEnergySynergyTag : string.Empty;
+                    asset.synergyBonus = kind == SubspaceSymbolKind.Beacon || kind == SubspaceSymbolKind.EnergyCore ? 5 : 0;
+                    asset.synergyWith = kind == SubspaceSymbolKind.Beacon ? "energy_core" : kind == SubspaceSymbolKind.EnergyCore ? "beacon" : string.Empty;
                 });
+        }
+
+        private static Sprite LoadSymbolArtwork(string displayName)
+        {
+            var iconName = GetSymbolIconName(displayName);
+            var path = $"{SymbolIconFolder}/{iconName}.png";
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        }
+
+        private static string GetSymbolIconName(string displayName)
+        {
+            switch (displayName)
+            {
+                case "信号加强点":
+                    return "信号加强";
+                case "信号加强器":
+                    return "信号增强";
+                case "现实链接":
+                    return "现实连接";
+                case "能量跃迁":
+                    return "能量迁越";
+                case "双重激发":
+                    return "双重激光";
+                case "信号献祭":
+                    return "献祭信号";
+                default:
+                    return displayName;
+            }
         }
 
         private static SubspaceLevelDefinition CreateLevel(
@@ -1009,6 +1151,10 @@ namespace Subspace.Editor
             string briefing,
             int targetScore,
             int turns,
+            string monsterId,
+            string monsterDisplayName,
+            SubspaceMonsterPressureType monsterPressureType,
+            int monsterPressureAmount,
             SubspaceSymbolDefinition rewardA,
             SubspaceSymbolDefinition rewardB,
             SubspaceSymbolDefinition rewardC)
@@ -1029,12 +1175,18 @@ namespace Subspace.Editor
                 asset.levelId = id;
             }
 
-            asset.enemyTargetScore = asset.enemyTargetScore <= 0 ? targetScore : asset.enemyTargetScore;
-            asset.maxTurns = asset.maxTurns <= 0 ? turns : asset.maxTurns;
-            asset.boardColumns = asset.boardColumns <= 0 ? 6 : asset.boardColumns;
-            asset.boardRows = asset.boardRows <= 0 ? 6 : asset.boardRows;
-            asset.selectionWidth = asset.selectionWidth < 3 ? 3 : asset.selectionWidth;
-            asset.selectionHeight = asset.selectionHeight < 3 ? 3 : asset.selectionHeight;
+            asset.displayName = displayName;
+            asset.briefingText = briefing;
+            asset.enemyTargetScore = targetScore;
+            asset.maxTurns = turns;
+            asset.boardColumns = 6;
+            asset.boardRows = 6;
+            asset.selectionWidth = 2;
+            asset.selectionHeight = 2;
+            asset.monsterId = monsterId;
+            asset.monsterDisplayName = monsterDisplayName;
+            asset.monsterPressureType = monsterPressureType;
+            asset.monsterPressureAmount = monsterPressureAmount;
 
             if (id == "level_01")
             {
@@ -1045,7 +1197,7 @@ namespace Subspace.Editor
                 asset.enemySpineHitAnimation = string.IsNullOrWhiteSpace(asset.enemySpineHitAnimation) ? asset.enemySpineIdleAnimation : asset.enemySpineHitAnimation;
                 asset.enemySpineDefeatedAnimation = string.IsNullOrWhiteSpace(asset.enemySpineDefeatedAnimation) ? asset.enemySpineIdleAnimation : asset.enemySpineDefeatedAnimation;
                 asset.enemySpineAnchoredPosition = asset.enemySpineAnchoredPosition == Vector2.zero ? new Vector2(0f, -24f) : asset.enemySpineAnchoredPosition;
-                asset.enemySpineSize = asset.enemySpineSize == Vector2.zero ? new Vector2(220f, 150f) : asset.enemySpineSize;
+                asset.enemySpineSize = new Vector2(180f, 180f);
                 asset.enemySpineScale = asset.enemySpineScale == Vector3.zero ? Vector3.one : asset.enemySpineScale;
             }
 
@@ -1149,17 +1301,6 @@ namespace Subspace.Editor
            Undo.RegisterCreatedObjectUndo(eventSystem, "Create EventSystem");
        }
  
-       private static void DisableLegacyController()
-       {
-           var legacy = Object.FindObjectOfType<SubspaceGameController>();
-           if (legacy != null && legacy.gameObject.activeSelf)
-           {
-               Undo.RecordObject(legacy.gameObject, "Disable Legacy SubspaceGameController");
-               legacy.gameObject.SetActive(false);
-               EditorSceneManager.MarkSceneDirty(legacy.gameObject.scene);
-           }
-       }
-
        private sealed class ComponentScene
        {
            public SubspaceGameDirector director;

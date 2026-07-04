@@ -15,7 +15,9 @@ MonoBehaviour:
   symbolId: life_signal
   displayName: "\u751F\u547D\u4FE1\u53F7"
   kind: 2
-  baseScore: 0
+  category: 1
+  rarity: 1
+  baseScore: 8
   tintColor: {r: 0.32, g: 0.66, b: 0.98, a: 1}
   artwork: {fileID: 21300000, guid: 53a16a48c854b624f9f8c2aa0d93740a, type: 3}
   effect: 0

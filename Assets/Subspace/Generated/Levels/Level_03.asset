@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28b0ba8b79e47bd469a6e6cbdd90f317, type: 3}
+  m_Name: Level_03
+  m_EditorClassIdentifier: 
+  levelId: level_03
+  displayName: "\u7B2C\u4E09\u5173\uFF1A\u5E72\u6270\u8005"
+  briefingText: "\u4EFB\u52A1\u7B80\u62A5\uFF1A\u5E72\u6270\u8005\u4F1A\u6270\u4E71\u626B\u63CF\u8DEF\u5F84\uFF0C\u4F7F\u5730\u56FE\u6210\u957F\u53D8\u5F97\u4E0D\u7A33\u5B9A\u3002"
+  enemyTargetScore: 900
+  maxTurns: 10
+  boardColumns: 6
+  boardRows: 6
+  selectionWidth: 2
+  selectionHeight: 2
+  monsterId: scanner_jammer
+  monsterDisplayName: "\u626B\u63CF\u5E72\u6270\u8005"
+  monsterPressureType: 3
+  monsterPressureAmount: 2
+  briefingBackgroundOverride: {fileID: 0}
+  enemySpriteOverride: {fileID: 0}
+  enemySpineSkeleton: {fileID: 0}
+  enemySpineMaterial: {fileID: 0}
+  enemySpineIdleAnimation: stand
+  enemySpineAttackAnimation: attack
+  enemySpineHitAnimation: stand
+  enemySpineDefeatedAnimation: stand
+  enemySpineAnchoredPosition: {x: 0, y: -24}
+  enemySpineSize: {x: 220, y: 150}
+  enemySpineScale: {x: 1, y: 1, z: 1}
+  rewardChoices:
+  - {fileID: 11400000, guid: 44c4338c0d7878541a71e0e9eb518a98, type: 2}
+  - {fileID: 11400000, guid: c162900844881ba4b8a071fd02a1c4a0, type: 2}
+  - {fileID: 11400000, guid: e520120141c146346b2756c73aa6a984, type: 2}

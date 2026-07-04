@@ -13,14 +13,18 @@ MonoBehaviour:
   m_Name: Level_02
   m_EditorClassIdentifier: 
   levelId: level_02
-  displayName: "\u7B2C\u4E8C\u5173\uFF1A\u8FD8\u662F\u6D4B\u8BD5\u5173\u5361"
-  briefingText: "\u4EFB\u52A1\u7B80\u62A5\uFF1A\u8FD9\u662F\u7B2C\u4E8C\u5173\uFF0C\u563F\u563F\u3002"
-  enemyTargetScore: 48
-  maxTurns: 6
+  displayName: "\u7B2C\u4E8C\u5173\uFF1A\u566C\u80FD\u56E2\u5757"
+  briefingText: "\u4EFB\u52A1\u7B80\u62A5\uFF1A\u566C\u80FD\u56E2\u5757\u4F1A\u4F18\u5148\u4FB5\u8680\u9AD8\u6536\u76CA\u5730\u5757\u3002\u5229\u7528\u8D44\u6E90\u8054\u52A8\u6491\u8FC7\u538B\u529B\u3002"
+  enemyTargetScore: 600
+  maxTurns: 9
   boardColumns: 6
   boardRows: 6
-  selectionWidth: 3
-  selectionHeight: 3
+  selectionWidth: 2
+  selectionHeight: 2
+  monsterId: energy_devourer
+  monsterDisplayName: "\u566C\u80FD\u56E2\u5757"
+  monsterPressureType: 2
+  monsterPressureAmount: 2
   briefingBackgroundOverride: {fileID: 0}
   enemySpriteOverride: {fileID: 0}
   enemySpineSkeleton: {fileID: 11400000, guid: cbe137fc2be15b949bbba070f5a67a83, type: 2}
@@ -33,6 +37,6 @@ MonoBehaviour:
   enemySpineSize: {x: 220, y: 150}
   enemySpineScale: {x: 1, y: 1, z: 1}
   rewardChoices:
-  - {fileID: 11400000, guid: 58c17d9780c74196a44e6ec4863943c9, type: 2}
-  - {fileID: 11400000, guid: 97f7ca6028734e73b74fbdacfbff9864, type: 2}
-  - {fileID: 11400000, guid: 271f0db99fd04fa49b39bd357b2d4e08, type: 2}
+  - {fileID: 11400000, guid: b636dceeeff906644b20be6f18288bc7, type: 2}
+  - {fileID: 11400000, guid: 548c0a56550c9fd479b1d6df6a348097, type: 2}
+  - {fileID: 11400000, guid: e520120141c146346b2756c73aa6a984, type: 2}

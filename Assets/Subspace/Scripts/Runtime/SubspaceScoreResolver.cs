@@ -60,6 +60,7 @@ namespace Subspace
            int columns = tiles.GetLength(0);
            int rows = tiles.GetLength(1);
            int total = 0;
+           var selectedSymbols = new List<SubspaceSymbolDefinition>();
 
            foreach (var position in shape.Cells)
            {
@@ -74,12 +75,20 @@ namespace Subspace
                    continue;
                }
 
-               var symbol = SubspaceTileRulebook.GetSymbolData(tile.currentSymbol);
-               int instantScore = ApplyResourceScoreBoost(symbol, context, out var resourceBoostDetail);
+                var symbolDefinition = tile.currentSymbol;
+                var symbol = SubspaceTileRulebook.GetSymbolData(symbolDefinition);
+                int baseInstantScore = SubspaceElementRules.GetInstantScore(symbolDefinition);
+                if (symbolDefinition.SafeKind == SubspaceSymbolKind.ChaosSignal)
+                {
+                    baseInstantScore = random != null ? random.Next(-10, 31) : Random.Range(-10, 31);
+                }
+
+                int instantScore = ApplyResourceScoreBoost(symbolDefinition, baseInstantScore, context, out var resourceBoostDetail);
                int tileModifier = GetScoreModifier(tile, context, out var pollutionReductionDetail);
                int tileEffectScore = ApplyAnchorEffectBoost(tile.baseBonusScore + tileModifier, context, out var anchorBoostDetail);
                int finalScore = instantScore + tileEffectScore;
                total += finalScore;
+               selectedSymbols.Add(symbolDefinition);
 
                string detail = $"即时 {symbol.instantScore}, 地块 {SubspaceTileRulebook.FormatSigned(tile.baseBonusScore)}, 状态 {SubspaceTileRulebook.FormatSigned(tileModifier)}";
                if (!string.IsNullOrEmpty(resourceBoostDetail))
@@ -101,22 +110,24 @@ namespace Subspace
                sources.Add(new SubspaceScoreSource(
                    symbol.displayName,
                    position,
-                   symbol.instantScore,
-                   instantScore + tileEffectScore,
+                   baseInstantScore,
+                   finalScore,
                    1,
                    finalScore,
                    detail));
 
-              SubspaceTileRulebook.ApplySymbolTileEffects(symbol, tile);
+              SubspaceElementRules.ApplyTileEffects(symbolDefinition, tile);
           }
 
+           ApplyElementTableBonuses(selectedSymbols, lines, sources, ref total);
+           ApplyElementSynergyBonuses(selectedSymbols, lines, sources, ref total);
           ApplySynergyBonuses(tiles, shape, context, total, lines, sources, ref total);
           ApplyFirstScanDouble(context, lines, sources, ref total);
 
           return new SubspaceScoreResult(total, 0, lines, sources);
      }
 
-     private static int ApplyResourceScoreBoost(SubspaceSymbolData symbol, SubspaceScoreContext context, out string detail)
+     private static int ApplyResourceScoreBoost(SubspaceSymbolDefinition symbol, int score, SubspaceScoreContext context, out string detail)
      {
          detail = string.Empty;
          if (symbol == null)
@@ -124,8 +135,7 @@ namespace Subspace
              return 0;
          }
 
-         int score = symbol.instantScore;
-         if (score == 0 || !context.HasUpgrade(SubspaceUpgradeType.ResourceScoreBoost) || !IsResourceSymbol(symbol))
+         if (score == 0 || !context.HasUpgrade(SubspaceUpgradeType.ResourceScoreBoost) || !SubspaceElementRules.IsResource(symbol))
          {
              return score;
          }
@@ -181,19 +191,6 @@ namespace Subspace
          return score + debuffScore;
      }
 
-     private static bool IsResourceSymbol(SubspaceSymbolData symbol)
-     {
-         if (symbol == null)
-         {
-             return false;
-         }
-
-         return symbol.type == SubspaceSymbolKind.Generic
-             || symbol.type == SubspaceSymbolKind.Beacon
-             || symbol.type == SubspaceSymbolKind.Anchor
-             || symbol.type == SubspaceSymbolKind.EnergyCore;
-     }
-
      private static void ApplyFirstScanDouble(SubspaceScoreContext context, List<string> lines, List<SubspaceScoreSource> sources, ref int total)
      {
          if (total == 0 || !context.isFirstScanThisLevel || !context.HasUpgrade(SubspaceUpgradeType.FirstScanDouble))
@@ -212,6 +209,119 @@ namespace Subspace
              1,
              bonus,
              $"First scan this level doubled score from {bonus} to {total}."));
+     }
+
+     private static void ApplyElementSynergyBonuses(IReadOnlyList<SubspaceSymbolDefinition> selectedSymbols, List<string> lines, List<SubspaceScoreSource> sources, ref int total)
+     {
+         if (selectedSymbols == null || selectedSymbols.Count < 2)
+         {
+             return;
+         }
+
+         bool hasSignal = false;
+         bool hasEnergy = false;
+         for (int i = 0; i < selectedSymbols.Count; i++)
+         {
+             var symbol = selectedSymbols[i];
+             if (symbol == null)
+             {
+                 continue;
+             }
+
+             hasSignal |= symbol.SafeKind == SubspaceSymbolKind.SignalNode;
+             hasEnergy |= symbol.SafeKind == SubspaceSymbolKind.EnergyShard;
+         }
+
+         if (!hasSignal || !hasEnergy)
+         {
+             return;
+         }
+
+         const int bonus = 5;
+         total += bonus;
+         lines.Add("信号节点 + 能量碎片: +5");
+         sources.Add(new SubspaceScoreSource("信号节点 + 能量碎片", BonusScoreKey, bonus, bonus, 1, bonus, "Resource synergy"));
+     }
+
+     private static void ApplyElementTableBonuses(IReadOnlyList<SubspaceSymbolDefinition> selectedSymbols, List<string> lines, List<SubspaceScoreSource> sources, ref int total)
+     {
+         if (selectedSymbols == null || selectedSymbols.Count == 0)
+         {
+             return;
+         }
+
+         int dataCount = 0;
+         int energyShardCount = 0;
+         int analysisCount = 0;
+         int resonanceCount = 0;
+         var kindCounts = new Dictionary<SubspaceSymbolKind, int>();
+
+         foreach (var symbol in selectedSymbols)
+         {
+             if (symbol == null)
+             {
+                 continue;
+             }
+
+             kindCounts.TryGetValue(symbol.SafeKind, out var count);
+             kindCounts[symbol.SafeKind] = count + 1;
+
+             if (symbol.SafeKind == SubspaceSymbolKind.Data)
+             {
+                 dataCount++;
+             }
+             else if (symbol.SafeKind == SubspaceSymbolKind.EnergyShard)
+             {
+                 energyShardCount++;
+             }
+             else if (symbol.SafeKind == SubspaceSymbolKind.MultidimensionalAnalysis)
+             {
+                 analysisCount++;
+             }
+             else if (symbol.SafeKind == SubspaceSymbolKind.ResonanceSignal)
+             {
+                 resonanceCount++;
+             }
+         }
+
+         if (dataCount > 1)
+         {
+             AddBonus("数据", dataCount * dataCount * 2, lines, sources, ref total, "Data count scaling.");
+         }
+
+         if (energyShardCount > 0)
+         {
+             AddBonus("能量碎片", energyShardCount * selectedSymbols.Count * 5, lines, sources, ref total, "Each Energy Shard gives every selected element +5.");
+         }
+
+         if (analysisCount > 0)
+         {
+             AddBonus("多维分析", analysisCount * kindCounts.Count * 3, lines, sources, ref total, "Each different selected element gives +3.");
+         }
+
+         if (resonanceCount > 0)
+         {
+             foreach (var entry in kindCounts)
+             {
+                 if (entry.Value * 2 >= selectedSymbols.Count)
+                 {
+                     AddBonus("共振信号", resonanceCount * 20, lines, sources, ref total, "At least half of the selected elements share one frequency.");
+                     break;
+                 }
+             }
+         }
+     }
+
+     private static void AddBonus(string name, int bonus, List<string> lines, List<SubspaceScoreSource> sources, ref int total, string detail)
+     {
+         if (bonus == 0)
+         {
+             return;
+         }
+
+         total += bonus;
+         lines.Add($"{name}: +{bonus}");
+         sources.Add(new SubspaceScoreSource(name, BonusScoreKey, bonus, bonus, 1, bonus, detail));
      }
 
      private static void ApplySynergyBonuses(SubspaceTileData[,] tiles, SubspaceSelectionShape shape, SubspaceScoreContext context, int currentTotal, List<string> lines, List<SubspaceScoreSource> sources, ref int total)

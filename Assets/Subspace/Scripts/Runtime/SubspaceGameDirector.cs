@@ -138,6 +138,12 @@ namespace Subspace
             textConfig = config.textConfig != null ? config.textConfig : SubspaceTextConfig.RuntimeDefault;
            ui.SetTextConfig(textConfig);
            briefing.SetTextConfig(textConfig);
+           if (menu == null && ui != null)
+           {
+               var menuHost = ui.GetComponentInParent<Canvas>() != null ? ui.GetComponentInParent<Canvas>().gameObject : gameObject;
+               menu = menuHost.AddComponent<SubspaceMenuController>();
+           }
+
            if (menu != null)
            {
                menu.SetTextConfig(textConfig);
@@ -196,7 +202,7 @@ namespace Subspace
            }
            else
            {
-               StartCampaign();
+               Debug.LogWarning("[Subspace] Menu controller is missing; main menu could not be shown.");
            }
        }
 
@@ -401,14 +407,155 @@ namespace Subspace
                 yield break;
             }
 
+            List<string> monsterLines = null;
             if (turnComplete)
             {
                 board.RerollOutside(selection.CurrentSelection);
+                monsterLines = ApplyMonsterPressure();
+                board.RefreshAll();
             }
 
-            ui.Refresh(currentLevel, totalScore, remainingTurns, 0, null, activeUpgrades);
+            ui.Refresh(currentLevel, totalScore, remainingTurns, 0, monsterLines, activeUpgrades);
             ui.SetAttackEnabled(true);
             busy = false;
+        }
+
+        private List<string> ApplyMonsterPressure()
+        {
+            var lines = new List<string>();
+            if (currentLevel == null || board == null || board.Tiles == null || random == null)
+            {
+                return lines;
+            }
+
+            int amount = Mathf.Max(1, currentLevel.monsterPressureAmount);
+            switch (currentLevel.monsterPressureType)
+            {
+                case SubspaceMonsterPressureType.None:
+                    return lines;
+                case SubspaceMonsterPressureType.ErodeStrongestTile:
+                    ErodeStrongestTile(amount, lines);
+                    break;
+                case SubspaceMonsterPressureType.JamScanner:
+                    JamScanner(amount, lines);
+                    break;
+                case SubspaceMonsterPressureType.CollapseAnchors:
+                    CollapseAnchors(amount, lines);
+                    break;
+                default:
+                    SpreadPollution(amount, lines);
+                    break;
+            }
+
+            if (lines.Count == 0)
+            {
+                lines.Add($"{currentLevel.monsterDisplayName}: no pressure target");
+            }
+
+            return lines;
+        }
+
+        private void SpreadPollution(int amount, List<string> lines)
+        {
+            for (int i = 0; i < amount; i++)
+            {
+                var tile = GetRandomTile();
+                if (tile == null)
+                {
+                    continue;
+                }
+
+                SubspaceElementRules.AddStack(tile.debuffs, SubspaceTileBuffType.SpacePollution, currentLevel.monsterDisplayName);
+                lines.Add($"{currentLevel.monsterDisplayName}: pollution +1");
+            }
+        }
+
+        private void ErodeStrongestTile(int amount, List<string> lines)
+        {
+            var strongest = GetStrongestTile();
+            if (strongest == null)
+            {
+                return;
+            }
+
+            strongest.baseBonusScore -= amount;
+            SubspaceElementRules.AddStack(strongest.debuffs, SubspaceTileBuffType.SpacePollution, currentLevel.monsterDisplayName);
+            lines.Add($"{currentLevel.monsterDisplayName}: strongest tile {SubspaceTileRulebook.FormatSigned(-amount)}");
+        }
+
+        private void JamScanner(int amount, List<string> lines)
+        {
+            for (int i = 0; i < amount; i++)
+            {
+                var tile = GetRandomTile();
+                if (tile == null)
+                {
+                    continue;
+                }
+
+                tile.baseBonusScore -= 1;
+            }
+
+            lines.Add($"{currentLevel.monsterDisplayName}: scanner interference");
+        }
+
+        private void CollapseAnchors(int amount, List<string> lines)
+        {
+            int affected = 0;
+            var tiles = board.Tiles;
+            for (int y = 0; y < board.Rows; y++)
+            {
+                for (int x = 0; x < board.Columns; x++)
+                {
+                    var tile = tiles[x, y];
+                    if (tile == null || tile.baseBonusScore <= 0)
+                    {
+                        continue;
+                    }
+
+                    tile.baseBonusScore = Mathf.Max(0, tile.baseBonusScore - amount);
+                    affected++;
+                }
+            }
+
+            if (affected > 0)
+            {
+                lines.Add($"{currentLevel.monsterDisplayName}: anchor network weakened");
+            }
+        }
+
+        private SubspaceTileData GetRandomTile()
+        {
+            if (board == null || board.Tiles == null || board.Columns <= 0 || board.Rows <= 0)
+            {
+                return null;
+            }
+
+            int x = random.Next(0, board.Columns);
+            int y = random.Next(0, board.Rows);
+            return board.Tiles[x, y];
+        }
+
+        private SubspaceTileData GetStrongestTile()
+        {
+            SubspaceTileData strongest = null;
+            int strongestScore = int.MinValue;
+            var tiles = board.Tiles;
+            for (int y = 0; y < board.Rows; y++)
+            {
+                for (int x = 0; x < board.Columns; x++)
+                {
+                    var tile = tiles[x, y];
+                    int score = SubspaceTileRulebook.CalculateTileScore(tile);
+                    if (tile != null && score > strongestScore)
+                    {
+                        strongest = tile;
+                        strongestScore = score;
+                    }
+                }
+            }
+
+            return strongest;
         }
 
         private IEnumerator PlayPlayerAttackWithBeamAndEnemyHit()
@@ -624,11 +771,10 @@ namespace Subspace
        private void ShowRewards()
        {
            ui.ShowGame(false);
-           var symbolRewards = currentLevel != null ? currentLevel.rewardChoices : null;
            var upgradeRewards = GetAvailableUpgradeChoices();
            var title = currentLevel != null ? textConfig.FormatRewardTitle(currentLevel.displayName) : textConfig.rewardFallbackTitle;
            audioController?.PlayRewardChoiceAppear();
-           rewards.ShowWithUpgrades(title, symbolRewards, upgradeRewards, ChooseReward, ChooseUpgrade, SkipReward, ResolveSymbolSprite);
+           rewards.ShowWithUpgrades(title, null, upgradeRewards, ChooseReward, ChooseUpgrade, SkipReward, ResolveSymbolSprite);
        }
 
        private void ChooseReward(SubspaceSymbolDefinition reward)
@@ -722,7 +868,7 @@ namespace Subspace
                }
            }
 
-           if (result.Count > 2)
+           if (result.Count > 3)
            {
                var shuffled = new System.Collections.Generic.List<SubspaceUpgradeDefinition>(result);
                for (int i = shuffled.Count - 1; i > 0; i--)
@@ -731,7 +877,7 @@ namespace Subspace
                    (shuffled[i], shuffled[j]) = (shuffled[j], shuffled[i]);
                }
 
-               result = shuffled.GetRange(0, 2);
+               result = shuffled.GetRange(0, 3);
            }
 
            return result;
