@@ -28,6 +28,9 @@ namespace Subspace
 
         private readonly List<SubspaceUpgradeItemView> upgradeItems = new List<SubspaceUpgradeItemView>();
         private readonly List<SubspaceScoreSource> lastDamageSources = new List<SubspaceScoreSource>();
+        private RectTransform enemyHpRuntimeRoot;
+        private Image enemyHpTrackImage;
+        private Text enemyHpValueText;
         private Coroutine hpFillRoutine;
 
         public void Configure(
@@ -126,7 +129,7 @@ namespace Subspace
 
             if (targetText != null)
             {
-                targetText.text = level != null ? $"\u654c\u4eba HP {Mathf.Max(0, level.SafeTargetScore - totalScore)}/{level.SafeTargetScore}" : string.Empty;
+                RefreshEnemyHpBar(level, totalScore);
             }
 
             if (turnText != null)
@@ -332,6 +335,7 @@ namespace Subspace
         private void SetHpFill(float targetFill)
         {
             targetFill = Mathf.Clamp01(targetFill);
+            EnsureEnemyHpBarLayout();
             hpFill.type = Image.Type.Filled;
             hpFill.fillMethod = Image.FillMethod.Horizontal;
             hpFill.fillOrigin = (int)Image.OriginHorizontal.Left;
@@ -347,6 +351,158 @@ namespace Subspace
             }
 
             hpFillRoutine = StartCoroutine(AnimateHpFill(targetFill));
+        }
+
+        private void RefreshEnemyHpBar(SubspaceLevelDefinition level, int totalScore)
+        {
+            EnsureEnemyHpBarLayout();
+            if (targetText != null)
+            {
+                targetText.text = "\u654c\u4eba HP";
+            }
+
+            if (enemyHpValueText != null)
+            {
+                enemyHpValueText.text = level != null
+                    ? $"{Mathf.Max(0, level.SafeTargetScore - totalScore)}/{level.SafeTargetScore}"
+                    : string.Empty;
+            }
+        }
+
+        private void EnsureEnemyHpBarLayout()
+        {
+            if (gameRoot == null || targetText == null || hpFill == null)
+            {
+                return;
+            }
+
+            if (enemyHpRuntimeRoot == null)
+            {
+                enemyHpRuntimeRoot = CreateEnemyHpRuntimeRoot();
+            }
+
+            targetText.transform.SetParent(enemyHpRuntimeRoot, false);
+            ConfigureHpLabel(targetText);
+
+            if (enemyHpTrackImage == null)
+            {
+                enemyHpTrackImage = CreateHpTrack(enemyHpRuntimeRoot);
+            }
+
+            hpFill.transform.SetParent(enemyHpTrackImage.transform, false);
+            ConfigureHpFill(hpFill);
+
+            if (enemyHpValueText == null)
+            {
+                enemyHpValueText = CreateHpValueText(enemyHpRuntimeRoot, targetText);
+            }
+        }
+
+        private RectTransform CreateEnemyHpRuntimeRoot()
+        {
+            var rootObject = new GameObject("Enemy HP Runtime Bar", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Outline));
+            rootObject.transform.SetParent(gameRoot.transform, false);
+            rootObject.transform.SetAsLastSibling();
+
+            var rect = rootObject.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.anchoredPosition = new Vector2(0f, -14f);
+            rect.sizeDelta = new Vector2(-58f, 40f);
+
+            var image = rootObject.GetComponent<Image>();
+            image.color = new Color(0.018f, 0.03f, 0.048f, 0.78f);
+            image.raycastTarget = false;
+
+            var outline = rootObject.GetComponent<Outline>();
+            outline.effectColor = new Color(0.24f, 0.34f, 0.42f, 0.62f);
+            outline.effectDistance = new Vector2(1.2f, -1.2f);
+            outline.useGraphicAlpha = true;
+
+            return rect;
+        }
+
+        private Image CreateHpTrack(RectTransform parent)
+        {
+            var trackObject = new GameObject("Enemy HP Track", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Outline));
+            trackObject.transform.SetParent(parent, false);
+
+            var rect = trackObject.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 0.5f);
+            rect.anchorMax = new Vector2(1f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = new Vector2(32f, -1f);
+            rect.sizeDelta = new Vector2(-250f, 16f);
+
+            var image = trackObject.GetComponent<Image>();
+            image.color = new Color(0.11f, 0.035f, 0.035f, 0.94f);
+            image.raycastTarget = false;
+
+            var outline = trackObject.GetComponent<Outline>();
+            outline.effectColor = new Color(0.76f, 0.18f, 0.14f, 0.8f);
+            outline.effectDistance = new Vector2(1f, -1f);
+            outline.useGraphicAlpha = true;
+
+            return image;
+        }
+
+        private void ConfigureHpLabel(Text label)
+        {
+            label.fontSize = 22;
+            label.fontStyle = FontStyle.Bold;
+            label.alignment = TextAnchor.MiddleLeft;
+            label.color = new Color(0.88f, 0.93f, 0.98f, 1f);
+            label.raycastTarget = false;
+            label.horizontalOverflow = HorizontalWrapMode.Overflow;
+            label.verticalOverflow = VerticalWrapMode.Truncate;
+
+            var rect = label.rectTransform;
+            rect.anchorMin = new Vector2(0f, 0f);
+            rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 0.5f);
+            rect.anchoredPosition = new Vector2(14f, 0f);
+            rect.sizeDelta = new Vector2(112f, 0f);
+        }
+
+        private void ConfigureHpFill(Image fill)
+        {
+            fill.color = new Color(0.95f, 0.08f, 0.05f, 1f);
+            fill.raycastTarget = false;
+            fill.type = Image.Type.Filled;
+            fill.fillMethod = Image.FillMethod.Horizontal;
+            fill.fillOrigin = (int)Image.OriginHorizontal.Left;
+
+            var rect = fill.rectTransform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = new Vector2(2f, 2f);
+            rect.offsetMax = new Vector2(-2f, -2f);
+            rect.pivot = new Vector2(0f, 0.5f);
+        }
+
+        private Text CreateHpValueText(RectTransform parent, Text template)
+        {
+            var valueObject = new GameObject("Enemy HP Value", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
+            valueObject.transform.SetParent(parent, false);
+
+            var value = valueObject.GetComponent<Text>();
+            value.font = template != null ? template.font : Font.CreateDynamicFontFromOSFont(new[] { "Microsoft YaHei", "SimHei", "Arial" }, 20);
+            value.fontSize = 22;
+            value.fontStyle = FontStyle.Bold;
+            value.alignment = TextAnchor.MiddleRight;
+            value.color = new Color(0.9f, 0.94f, 1f, 1f);
+            value.raycastTarget = false;
+            value.horizontalOverflow = HorizontalWrapMode.Overflow;
+            value.verticalOverflow = VerticalWrapMode.Truncate;
+
+            var rect = value.rectTransform;
+            rect.anchorMin = new Vector2(1f, 0f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(1f, 0.5f);
+            rect.anchoredPosition = new Vector2(-18f, 0f);
+            rect.sizeDelta = new Vector2(118f, 0f);
+            return value;
         }
 
         private System.Collections.IEnumerator AnimateHpFill(float targetFill)
