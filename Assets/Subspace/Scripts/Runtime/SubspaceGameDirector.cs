@@ -1,9 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using Spine.Unity;
 using UnityEngine;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Subspace
 {
@@ -65,11 +69,23 @@ namespace Subspace
         [SerializeField] private float enemyCounterAttackDuration = 0.55f;
         [SerializeField] private float playerHitDuration = 0.25f;
 
+        [Header("Player Panel Spine")]
+        [SerializeField] private SkeletonDataAsset playerPanelSpineSkeleton;
+        [Tooltip("Leave empty for multi-page Spine atlases so each atlas material is used correctly.")]
+        [SerializeField] private Material playerPanelSpineMaterial;
+        [SerializeField] private string playerPanelIdleAnimation = "stand";
+        [SerializeField] private string playerPanelAttackAnimation = "attack";
+        [SerializeField] private string playerPanelDieAnimation = "die";
+        [SerializeField] private Vector2 playerPanelSpineAnchoredPosition = new Vector2(18f, 10f);
+        [SerializeField] private Vector2 playerPanelSpineSize = new Vector2(190f, 206f);
+        [SerializeField] private Vector3 playerPanelSpineScale = Vector3.one;
+
        private readonly List<SubspaceSymbolDefinition> symbolPool = new List<SubspaceSymbolDefinition>();
        private readonly List<SubspaceUpgradeDefinition> activeUpgrades = new List<SubspaceUpgradeDefinition>();
        private SubspaceLevelDefinition currentLevel;
         private SubspaceArtSet artSet;
         private SubspaceTextConfig textConfig;
+        private SubspaceSpineActorView playerPanelSpineView;
         private System.Random random;
         private int levelIndex;
         private int totalScore;
@@ -312,10 +328,7 @@ namespace Subspace
             enemy.SetAnimatorStateNames("Stand", "Attack", "Hit", "Defeated");
             enemy.ApplySpineLevel(currentLevel);
             LowerEnemyPortraitForHpBar();
-            if (ui != null)
-            {
-                ui.HidePlayerPortraitImage();
-            }
+            EnsurePlayerPanelSpine(true);
 
             player.ShowIdle(GetPlayerIdle());
             enemy.ShowIdle(GetEnemyIdle());
@@ -648,6 +661,7 @@ namespace Subspace
         {
             Coroutine beamRoutine = StartCoroutine(PlayPlayerBeam());
             Coroutine enemyHitRoutine = enemy != null ? StartCoroutine(enemy.PlayHit(GetEnemyDefeated(), 0.25f)) : null;
+            Coroutine panelAttackRoutine = StartCoroutine(PlayPlayerPanelAttack());
             yield return player.PlayAttack(GetPlayerIdle());
 
             if (beamRoutine != null)
@@ -659,6 +673,23 @@ namespace Subspace
             {
                 yield return enemyHitRoutine;
             }
+
+            if (panelAttackRoutine != null)
+            {
+                yield return panelAttackRoutine;
+            }
+        }
+
+        private IEnumerator PlayPlayerPanelAttack()
+        {
+            EnsurePlayerPanelSpine(false);
+            if (playerPanelSpineView == null || !playerPanelSpineView.PlayAttack())
+            {
+                yield break;
+            }
+
+            yield return new WaitForSeconds(playerPanelSpineView.GetAttackDuration(0.45f));
+            playerPanelSpineView.PlayIdle();
         }
 
         private IEnumerator PlayPlayerBeam()
@@ -849,8 +880,20 @@ namespace Subspace
             if (player != null)
             {
                 yield return player.PlayHit(GetPlayerIdle(), playerHitDuration);
-                player.ShowIdle(GetPlayerIdle());
             }
+
+            yield return PlayPlayerPanelDefeated();
+        }
+
+        private IEnumerator PlayPlayerPanelDefeated()
+        {
+            EnsurePlayerPanelSpine(false);
+            if (playerPanelSpineView == null || !playerPanelSpineView.PlayDefeated())
+            {
+                yield break;
+            }
+
+            yield return new WaitForSeconds(playerPanelSpineView.GetDefeatedDuration(0.45f));
         }
 
         private IEnumerator PlayEnemyFailureAttackEffect()
@@ -1138,6 +1181,39 @@ namespace Subspace
             {
                 spineRect.anchoredPosition = new Vector2(spineRect.anchoredPosition.x, -42f);
             }
+        }
+
+        private void EnsurePlayerPanelSpine(bool playIdle)
+        {
+            LoadDefaultPlayerPanelSpineAssets();
+            if (ui == null || playerPanelSpineSkeleton == null)
+            {
+                ui?.HidePlayerPortraitImage();
+                return;
+            }
+
+            playerPanelSpineView = ui.EnsurePlayerPanelSpineView(
+                playerPanelSpineSkeleton,
+                playerPanelSpineMaterial,
+                playerPanelIdleAnimation,
+                playerPanelAttackAnimation,
+                playerPanelDieAnimation,
+                playerPanelSpineAnchoredPosition,
+                playerPanelSpineSize,
+                playerPanelSpineScale,
+                playIdle);
+        }
+
+        private void LoadDefaultPlayerPanelSpineAssets()
+        {
+#if UNITY_EDITOR
+            if (playerPanelSpineSkeleton == null)
+            {
+                playerPanelSpineSkeleton = AssetDatabase.LoadAssetAtPath<SkeletonDataAsset>("Assets/Art/Player/\u7f8e\u5c11\u5973/skeleton_SkeletonData.asset");
+            }
+
+            playerPanelSpineMaterial = null;
+#endif
         }
 
         private Sprite ResolveSymbolSprite(SubspaceSymbolDefinition symbol)

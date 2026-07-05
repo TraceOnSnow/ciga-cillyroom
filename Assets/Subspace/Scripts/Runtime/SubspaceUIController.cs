@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Spine.Unity;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
@@ -253,6 +254,59 @@ namespace Subspace
             {
                 existing.gameObject.SetActive(false);
             }
+        }
+
+        public SubspaceSpineActorView EnsurePlayerPanelSpineView(
+            SkeletonDataAsset skeleton,
+            Material material,
+            string idle,
+            string attack,
+            string die,
+            Vector2 anchoredPosition,
+            Vector2 size,
+            Vector3 scale,
+            bool playIdle = true)
+        {
+            if (gameRoot == null || skeleton == null)
+            {
+                return null;
+            }
+
+            var panel = FindDeepChild(gameRoot.transform, "Player Animation Panel");
+            if (panel == null)
+            {
+                return null;
+            }
+
+            HidePlayerPortraitImage();
+
+            var existing = FindDeepChild(panel, "Player Spine Graphic");
+            SubspaceSpineActorView view;
+            if (existing != null && existing.TryGetComponent(out view))
+            {
+                view.ApplySkeleton(skeleton, material, idle, attack, idle, die, anchoredPosition, size, scale, playIdle);
+                existing.SetAsLastSibling();
+                return view;
+            }
+
+            var spineObject = new GameObject("Player Spine Graphic", typeof(RectTransform), typeof(CanvasRenderer), typeof(SubspaceSpineActorView));
+            spineObject.transform.SetParent(panel, false);
+            spineObject.transform.SetAsLastSibling();
+
+            var rect = spineObject.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.zero;
+            rect.pivot = Vector2.zero;
+
+            var components = SkeletonGraphic.AddSkeletonGraphicAnimationComponents(spineObject, skeleton, null, true);
+            var graphic = components.skeletonRenderer;
+            graphic.raycastTarget = false;
+            graphic.allowMultipleCanvasRenderers = true;
+
+            view = spineObject.GetComponent<SubspaceSpineActorView>();
+            view.Configure(graphic, components.skeletonAnimation);
+            view.ApplySkeleton(skeleton, material, idle, attack, idle, die, anchoredPosition, size, scale, playIdle);
+            return view;
         }
 
         public void ShowMessage(string title, string body, string buttonLabel, UnityAction onClick)
