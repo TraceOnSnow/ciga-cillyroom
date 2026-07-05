@@ -1,0 +1,13 @@
+skeleton.png
+size:159,140
+filter:Linear,Linear
+MONS31
+bounds:2,45,96,93
+MONS32
+bounds:100,67,71,57
+rotate:90
+MONS33
+bounds:82,26,39,59
+rotate:90
+MONS34
+bounds:7,2,73,48

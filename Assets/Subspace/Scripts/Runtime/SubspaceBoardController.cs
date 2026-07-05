@@ -15,6 +15,7 @@ namespace Subspace
         [SerializeField] private RectTransform boardRect;
         [SerializeField] private GridLayoutGroup gridLayout;
         [SerializeField] private SubspaceSymbolCellView cellPrefab;
+        [SerializeField] private Vector2 cellSpacing = new Vector2(6f, 6f);
         [Header("Refresh Animation")]
         [SerializeField] private GameObject disappearPrefab;
         [SerializeField] private float disappearLifetime = 0.8f;
@@ -169,11 +170,12 @@ namespace Subspace
                 return false;
             }
 
-            float normalizedX = Mathf.InverseLerp(rect.xMin, rect.xMax, localPoint.x);
-            float normalizedY = Mathf.InverseLerp(rect.yMax, rect.yMin, localPoint.y);
+            Vector2 stride = GetCellStride();
+            float normalizedX = (localPoint.x - rect.xMin) / Mathf.Max(1f, stride.x);
+            float normalizedY = (rect.yMax - localPoint.y) / Mathf.Max(1f, stride.y);
             cell = new Vector2Int(
-                Mathf.Clamp(Mathf.FloorToInt(normalizedX * columns), 0, columns - 1),
-                Mathf.Clamp(Mathf.FloorToInt(normalizedY * rows), 0, rows - 1));
+                Mathf.Clamp(Mathf.FloorToInt(normalizedX), 0, columns - 1),
+                Mathf.Clamp(Mathf.FloorToInt(normalizedY), 0, rows - 1));
             return true;
         }
 
@@ -186,6 +188,32 @@ namespace Subspace
 
             RefreshCellSize();
             return gridLayout.cellSize;
+        }
+
+        public Vector2 GetCellStride()
+        {
+            if (gridLayout == null)
+            {
+                return Vector2.one;
+            }
+
+            RefreshCellSize();
+            return gridLayout.cellSize + gridLayout.spacing;
+        }
+
+        public Vector2 GetSelectionSize(int width, int height)
+        {
+            if (gridLayout == null)
+            {
+                return Vector2.one;
+            }
+
+            RefreshCellSize();
+            Vector2 cellSize = gridLayout.cellSize;
+            Vector2 spacing = gridLayout.spacing;
+            return new Vector2(
+                cellSize.x * width + spacing.x * Mathf.Max(0, width - 1),
+                cellSize.y * height + spacing.y * Mathf.Max(0, height - 1));
         }
 
         private void EnsureCells()
@@ -225,9 +253,13 @@ namespace Subspace
             Canvas.ForceUpdateCanvases();
             float width = boardRect.rect.width > 1f ? boardRect.rect.width : boardRect.sizeDelta.x;
             float height = boardRect.rect.height > 1f ? boardRect.rect.height : boardRect.sizeDelta.y;
-            float cellSize = Mathf.Floor(Mathf.Min(width / columns, height / rows));
+            Vector2 configuredSpacing = gridLayout.spacing == Vector2.zero ? cellSpacing : gridLayout.spacing;
+            Vector2 safeSpacing = new Vector2(Mathf.Max(0f, configuredSpacing.x), Mathf.Max(0f, configuredSpacing.y));
+            float availableWidth = Mathf.Max(1f, width - safeSpacing.x * Mathf.Max(0, columns - 1));
+            float availableHeight = Mathf.Max(1f, height - safeSpacing.y * Mathf.Max(0, rows - 1));
+            float cellSize = Mathf.Floor(Mathf.Min(availableWidth / columns, availableHeight / rows));
             gridLayout.cellSize = new Vector2(cellSize, cellSize);
-            gridLayout.spacing = Vector2.zero;
+            gridLayout.spacing = safeSpacing;
         }
 
         private SubspaceSymbolDefinition GetRandomSymbol()
@@ -338,9 +370,10 @@ namespace Subspace
         private Vector2 GetFallbackCellLocalPosition(int x, int y)
         {
             Vector2 cellSize = GetCellSize();
+            Vector2 stride = GetCellStride();
             Rect rect = boardRect.rect;
-            float localX = rect.xMin + cellSize.x * (x + 0.5f);
-            float localY = rect.yMax - cellSize.y * (y + 0.5f);
+            float localX = rect.xMin + stride.x * x + cellSize.x * 0.5f;
+            float localY = rect.yMax - stride.y * y - cellSize.y * 0.5f;
             return new Vector2(localX, localY);
         }
 

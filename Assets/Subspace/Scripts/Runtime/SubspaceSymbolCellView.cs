@@ -7,12 +7,15 @@ namespace Subspace
     public sealed class SubspaceSymbolCellView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerMoveHandler
     {
         private const int MaxBuffIcons = 3;
+        private const float BackgroundAlpha = 0.38f;
+        private static readonly Color CellOutlineColor = new Color(0f, 0f, 0f, 0.9f);
 
         [SerializeField] private Image icon;
         [SerializeField] private Image symbolIcon;
         [SerializeField] private Text label;
         [SerializeField] private RectTransform buffContainer;
         [SerializeField] private Text baseBonusText;
+        [SerializeField] private Outline cellOutline;
 
         private readonly System.Collections.Generic.List<SubspaceTileBuffIconView> buffIcons = new System.Collections.Generic.List<SubspaceTileBuffIconView>();
         private SubspaceTileData tile;
@@ -38,7 +41,9 @@ namespace Subspace
             if (icon != null)
             {
                 icon.sprite = null;
-                icon.color = symbol != null ? Color.Lerp(new Color(0.07f, 0.08f, 0.1f, 1f), symbol.SafeTint, 0.28f) : Color.white;
+                Color backgroundColor = symbol != null ? Color.Lerp(new Color(0.07f, 0.08f, 0.1f, 1f), symbol.SafeTint, 0.28f) : Color.white;
+                backgroundColor.a = symbol != null ? BackgroundAlpha : 0f;
+                icon.color = backgroundColor;
                 icon.raycastTarget = true;
             }
 
@@ -103,6 +108,19 @@ namespace Subspace
             if (icon == null)
             {
                 icon = GetComponent<Image>();
+            }
+
+            if (cellOutline == null)
+            {
+                cellOutline = GetComponent<Outline>();
+                if (cellOutline == null)
+                {
+                    cellOutline = gameObject.AddComponent<Outline>();
+                }
+
+                cellOutline.effectColor = CellOutlineColor;
+                cellOutline.effectDistance = new Vector2(1.5f, -1.5f);
+                cellOutline.useGraphicAlpha = false;
             }
 
             if (symbolIcon == null)

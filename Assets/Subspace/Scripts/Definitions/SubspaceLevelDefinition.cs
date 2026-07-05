@@ -34,6 +34,10 @@ namespace Subspace
         public string monsterDisplayName = "\u4e9a\u7a7a\u95f4\u5e7c\u4f53";
         public SubspaceMonsterPressureType monsterPressureType = SubspaceMonsterPressureType.SpreadPollution;
         public int monsterPressureAmount = 1;
+        public GameObject enemyFailureAttackEffectPrefab;
+        public Vector2 enemyFailureAttackEffectOffset = new Vector2(0f, -48f);
+        public Vector2 enemyFailureAttackEffectSize = new Vector2(180f, 180f);
+        public float enemyFailureAttackEffectDuration = 0.65f;
 
         [Header("Optional Art Overrides")]
         public Sprite briefingBackgroundOverride;
