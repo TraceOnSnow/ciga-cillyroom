@@ -341,7 +341,7 @@ namespace Subspace
             hpFill.fillOrigin = (int)Image.OriginHorizontal.Left;
             if (!gameObject.activeInHierarchy)
             {
-                hpFill.fillAmount = targetFill;
+                ApplyHpFillVisual(targetFill);
                 return;
             }
 
@@ -408,8 +408,10 @@ namespace Subspace
             rect.anchorMin = new Vector2(0f, 1f);
             rect.anchorMax = new Vector2(1f, 1f);
             rect.pivot = new Vector2(0.5f, 1f);
-            rect.anchoredPosition = new Vector2(0f, -14f);
-            rect.sizeDelta = new Vector2(-58f, 40f);
+            rect.offsetMin = new Vector2(671.8f, rect.offsetMin.y);
+            rect.offsetMax = new Vector2(-31.09998f, rect.offsetMax.y);
+            rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, -29.1f);
+            rect.sizeDelta = new Vector2(rect.sizeDelta.x, 40f);
 
             var image = rootObject.GetComponent<Image>();
             image.color = new Color(0.018f, 0.03f, 0.048f, 0.78f);
@@ -474,8 +476,9 @@ namespace Subspace
             fill.fillOrigin = (int)Image.OriginHorizontal.Left;
 
             var rect = fill.rectTransform;
+            float currentFill = rect.anchorMax.x > 0f && rect.anchorMax.x <= 1f ? rect.anchorMax.x : Mathf.Clamp01(fill.fillAmount);
             rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
+            rect.anchorMax = new Vector2(currentFill, 1f);
             rect.offsetMin = new Vector2(2f, 2f);
             rect.offsetMax = new Vector2(-2f, -2f);
             rect.pivot = new Vector2(0f, 0.5f);
@@ -507,19 +510,45 @@ namespace Subspace
 
         private System.Collections.IEnumerator AnimateHpFill(float targetFill)
         {
-            float start = hpFill.fillAmount;
+            float start = GetCurrentHpFillVisual();
             const float duration = 0.28f;
             float elapsed = 0f;
             while (elapsed < duration)
             {
                 elapsed += Time.deltaTime;
                 float t = Mathf.Clamp01(elapsed / duration);
-                hpFill.fillAmount = Mathf.Lerp(start, targetFill, t);
+                ApplyHpFillVisual(Mathf.Lerp(start, targetFill, t));
                 yield return null;
             }
 
-            hpFill.fillAmount = targetFill;
+            ApplyHpFillVisual(targetFill);
             hpFillRoutine = null;
+        }
+
+        private void ApplyHpFillVisual(float fill)
+        {
+            fill = Mathf.Clamp01(fill);
+            if (hpFill == null)
+            {
+                return;
+            }
+
+            hpFill.fillAmount = fill;
+            var rect = hpFill.rectTransform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = new Vector2(fill, 1f);
+            rect.offsetMin = new Vector2(2f, 2f);
+            rect.offsetMax = new Vector2(-2f, -2f);
+        }
+
+        private float GetCurrentHpFillVisual()
+        {
+            if (hpFill == null)
+            {
+                return 0f;
+            }
+
+            return Mathf.Clamp01(hpFill.rectTransform.anchorMax.x);
         }
 
         private string BuildDamageTooltip()
