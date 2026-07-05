@@ -262,15 +262,14 @@ namespace Subspace
             timeRewindAvailable = HasActiveUpgrade(SubspaceUpgradeType.TimeRewind);
             busy = false;
 
-            player.SetColors(artSet.playerColor, artSet.playerAttackColor, artSet.playerColor);
+            player.SetColors(Color.white, artSet.playerAttackColor, Color.white);
             enemy.SetColors(artSet.enemyColor, artSet.enemyColor, artSet.defeatedEnemyColor);
             enemy.SetAnimatorStateNames("Stand", "Attack", "Hit", "Defeated");
             enemy.ApplySpineLevel(currentLevel);
             LowerEnemyPortraitForHpBar();
-            var playerPortrait = ui != null ? ui.EnsurePlayerPortraitImage() : null;
-            if (player != null && playerPortrait != null)
+            if (ui != null)
             {
-                player.AddMirrorImage(playerPortrait);
+                ui.HidePlayerPortraitImage();
             }
 
             player.ShowIdle(GetPlayerIdle());
