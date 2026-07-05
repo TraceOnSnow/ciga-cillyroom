@@ -238,6 +238,26 @@ namespace Subspace
             return portrait;
         }
 
+        public void HidePlayerPortraitImage()
+        {
+            if (gameRoot == null)
+            {
+                return;
+            }
+
+            var panel = FindDeepChild(gameRoot.transform, "Player Animation Panel");
+            if (panel == null)
+            {
+                return;
+            }
+
+            var existing = FindDeepChild(panel, "Player Portrait");
+            if (existing != null)
+            {
+                existing.gameObject.SetActive(false);
+            }
+        }
+
         public void ShowMessage(string title, string body, string buttonLabel, UnityAction onClick)
         {
             ShowGame(false);

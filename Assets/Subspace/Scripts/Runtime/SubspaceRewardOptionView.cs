@@ -25,6 +25,11 @@ namespace Subspace
             textConfig = config != null ? config : SubspaceTextConfig.RuntimeDefault;
         }
 
+        private void Awake()
+        {
+            EnsureIconImage();
+        }
+
        public void SetReward(SubspaceSymbolDefinition reward, Sprite sprite, UnityAction onClick)
        {
            if (button != null)
@@ -33,10 +38,13 @@ namespace Subspace
                button.onClick.AddListener(onClick);
            }
 
+           EnsureIconImage();
            if (icon != null)
            {
                icon.sprite = sprite;
-               icon.color = sprite != null ? Color.white : reward != null ? reward.SafeTint : Color.clear;
+               icon.color = sprite != null ? Color.white : Color.clear;
+               icon.preserveAspect = true;
+               icon.raycastTarget = false;
            }
 
            if (nameText != null)
@@ -58,10 +66,13 @@ namespace Subspace
                button.onClick.AddListener(onClick);
            }
 
+           EnsureIconImage();
            if (icon != null)
            {
                icon.sprite = null;
-               icon.color = upgrade != null ? new Color(0.98f, 0.84f, 0.22f, 1f) : Color.clear;
+               icon.color = Color.clear;
+               icon.preserveAspect = true;
+               icon.raycastTarget = false;
            }
 
            if (nameText != null)
@@ -74,6 +85,36 @@ namespace Subspace
                scoreText.text = upgrade != null ? upgrade.description : string.Empty;
            }
        }
+
+        private void EnsureIconImage()
+        {
+            if (icon != null && icon.gameObject != gameObject)
+            {
+                return;
+            }
+
+            var iconTransform = transform.Find("Icon");
+            if (iconTransform != null && iconTransform.TryGetComponent<Image>(out var existingIcon))
+            {
+                icon = existingIcon;
+                return;
+            }
+
+            var iconObject = new GameObject("Icon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            iconObject.transform.SetParent(transform, false);
+            icon = iconObject.GetComponent<Image>();
+            icon.raycastTarget = false;
+            icon.preserveAspect = true;
+            icon.color = Color.clear;
+
+            var rect = icon.rectTransform;
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = new Vector2(0f, 22f);
+            rect.sizeDelta = new Vector2(84f, 84f);
+            iconObject.transform.SetAsFirstSibling();
+        }
 
         private SubspaceTextConfig TextConfig => textConfig != null ? textConfig : SubspaceTextConfig.RuntimeDefault;
     }

@@ -12,20 +12,47 @@ namespace Subspace.Editor
             DrawDefaultInspector();
 
             EditorGUILayout.Space(8f);
-            if (EditorApplication.isPlaying && GUILayout.Button("下次攻击强制失败（扣除 9999 分）"))
+            if (EditorApplication.isPlaying)
             {
-                foreach (var targetObject in targets)
+                if (GUILayout.Button("\u8c03\u8bd5\uff1a\u7acb\u5373\u589e\u52a0 99999 \u5206"))
                 {
-                    if (targetObject is SubspaceGameDirector director)
+                    foreach (var targetObject in targets)
                     {
-                        director.ForceFailureForTest();
-                        EditorUtility.SetDirty(director);
+                        if (targetObject is SubspaceGameDirector director)
+                        {
+                            director.AddScoreForDebug();
+                            EditorUtility.SetDirty(director);
+                        }
+                    }
+                }
+
+                if (GUILayout.Button("\u8c03\u8bd5\uff1a\u7acb\u5373\u6263\u9664 99999 \u5206"))
+                {
+                    foreach (var targetObject in targets)
+                    {
+                        if (targetObject is SubspaceGameDirector director)
+                        {
+                            director.SubtractScoreForDebug();
+                            EditorUtility.SetDirty(director);
+                        }
+                    }
+                }
+
+                if (GUILayout.Button("\u8c03\u8bd5\uff1a\u76f4\u63a5\u5931\u8d25"))
+                {
+                    foreach (var targetObject in targets)
+                    {
+                        if (targetObject is SubspaceGameDirector director)
+                        {
+                            director.FailImmediatelyForDebug();
+                            EditorUtility.SetDirty(director);
+                        }
                     }
                 }
             }
             else if (!EditorApplication.isPlaying)
             {
-                EditorGUILayout.HelpBox("进入 Play 模式后可点击测试按钮：下次攻击强制失败（扣除 9999 分）。", MessageType.Info);
+                EditorGUILayout.HelpBox("\u8fdb\u5165 Play \u6a21\u5f0f\u540e\u53ef\u70b9\u51fb\u8c03\u8bd5\u6309\u94ae\uff1a\u589e\u52a0/\u6263\u9664 99999 \u5206\uff0c\u6216\u76f4\u63a5\u5931\u8d25\u3002", MessageType.Info);
             }
         }
     }

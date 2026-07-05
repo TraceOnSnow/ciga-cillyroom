@@ -25,6 +25,10 @@ MonoBehaviour:
   monsterDisplayName: "\u566C\u80FD\u56E2\u5757"
   monsterPressureType: 2
   monsterPressureAmount: 2
+  enemyFailureAttackEffectPrefab: {fileID: 0}
+  enemyFailureAttackEffectOffset: {x: 0, y: -48}
+  enemyFailureAttackEffectSize: {x: 180, y: 180}
+  enemyFailureAttackEffectDuration: 0.65
   briefingBackgroundOverride: {fileID: 0}
   enemySpriteOverride: {fileID: 0}
   enemySpineSkeleton: {fileID: 11400000, guid: cbe137fc2be15b949bbba070f5a67a83, type: 2}

@@ -25,6 +25,9 @@ namespace Subspace.Editor
         private const string DisappearPrefabPath = "Assets/Art/Land/Disappear.prefab";
         private const string MonsterOneSkeletonPath = "Assets/Art/Monster/Monster_1/MONSTER1_SkeletonData.asset";
         private const string MonsterOneMaterialPath = "Assets/Art/Monster/Monster_1/MONSTER1_Material.mat";
+        private const string MonsterThreeSkeletonPath = "Assets/Art/Monster/Monster_3/skeleton_SkeletonData.asset";
+        private const string MonsterThreeMaterialPath = "Assets/Art/Monster/Monster_3/skeleton_Material.mat";
+        private const string MonsterThreeAttackEffectPath = "Assets/Art/Monster/Monster_3/Mon3ATK.prefab";
 
         [MenuItem("Subspace/原型生成器")]
         public static void Open()
@@ -733,6 +736,7 @@ namespace Subspace.Editor
             var grid = gridObject.GetComponent<GridLayoutGroup>();
             grid.childAlignment = TextAnchor.UpperLeft;
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            grid.spacing = new Vector2(6f, 6f);
 
             var cellPrefab = CreateSymbolCellPrefab(boardPanel.transform, artSet);
             cellPrefab.gameObject.SetActive(false);
@@ -917,7 +921,12 @@ namespace Subspace.Editor
         {
             var button = CreateButton(parent, "Reward Option Prefab", "奖励", new Color(1f, 0.72f, 0.18f, 1f));
             SetLowerLeft(button.GetComponent<RectTransform>(), 0f, 0f, 176f, 210f);
-            var icon = button.GetComponent<Image>();
+            var iconObject = CreateChild(button.transform, "Icon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            var icon = iconObject.GetComponent<Image>();
+            icon.color = Color.clear;
+            icon.raycastTarget = false;
+            icon.preserveAspect = true;
+            SetLowerLeft(icon.rectTransform, 46f, 86f, 84f, 84f);
             var name = button.GetComponentInChildren<Text>();
             var score = CreateText(button.transform, "Score Text", textConfig.FormatRewardScore("奖励"), 20, Color.white, TextAnchor.MiddleCenter);
             SetLowerLeft(score.rectTransform, 16f, 26f, 144f, 32f);
@@ -1196,6 +1205,9 @@ namespace Subspace.Editor
             asset.monsterDisplayName = monsterDisplayName;
             asset.monsterPressureType = monsterPressureType;
             asset.monsterPressureAmount = monsterPressureAmount;
+            asset.enemyFailureAttackEffectOffset = asset.enemyFailureAttackEffectOffset == Vector2.zero ? new Vector2(0f, -48f) : asset.enemyFailureAttackEffectOffset;
+            asset.enemyFailureAttackEffectSize = asset.enemyFailureAttackEffectSize == Vector2.zero ? new Vector2(180f, 180f) : asset.enemyFailureAttackEffectSize;
+            asset.enemyFailureAttackEffectDuration = asset.enemyFailureAttackEffectDuration <= 0f ? 0.65f : asset.enemyFailureAttackEffectDuration;
 
             if (id == "level_01")
             {
@@ -1208,6 +1220,22 @@ namespace Subspace.Editor
                 asset.enemySpineAnchoredPosition = asset.enemySpineAnchoredPosition == Vector2.zero ? new Vector2(0f, -24f) : asset.enemySpineAnchoredPosition;
                 asset.enemySpineSize = new Vector2(180f, 180f);
                 asset.enemySpineScale = asset.enemySpineScale == Vector3.zero ? Vector3.one : asset.enemySpineScale;
+            }
+            else if (id == "level_03")
+            {
+                asset.enemySpineSkeleton = asset.enemySpineSkeleton == null ? LoadMonsterThreeSkeleton() : asset.enemySpineSkeleton;
+                asset.enemySpineMaterial = asset.enemySpineMaterial == null ? LoadMonsterThreeMaterial() : asset.enemySpineMaterial;
+                asset.enemySpineIdleAnimation = string.IsNullOrWhiteSpace(asset.enemySpineIdleAnimation) ? "stand" : asset.enemySpineIdleAnimation;
+                asset.enemySpineAttackAnimation = string.IsNullOrWhiteSpace(asset.enemySpineAttackAnimation) ? "attack" : asset.enemySpineAttackAnimation;
+                asset.enemySpineHitAnimation = string.IsNullOrWhiteSpace(asset.enemySpineHitAnimation) ? asset.enemySpineIdleAnimation : asset.enemySpineHitAnimation;
+                asset.enemySpineDefeatedAnimation = string.IsNullOrWhiteSpace(asset.enemySpineDefeatedAnimation) ? asset.enemySpineIdleAnimation : asset.enemySpineDefeatedAnimation;
+                asset.enemySpineAnchoredPosition = new Vector2(0f, -62f);
+                asset.enemySpineSize = new Vector2(220f, 180f);
+                asset.enemySpineScale = asset.enemySpineScale == Vector3.zero ? Vector3.one : asset.enemySpineScale;
+                asset.enemyFailureAttackEffectPrefab = asset.enemyFailureAttackEffectPrefab == null ? LoadMonsterThreeAttackEffect() : asset.enemyFailureAttackEffectPrefab;
+                asset.enemyFailureAttackEffectOffset = new Vector2(42f, 30f);
+                asset.enemyFailureAttackEffectSize = new Vector2(210f, 190f);
+                asset.enemyFailureAttackEffectDuration = 0.65f;
             }
 
             asset.rewardChoices = new List<SubspaceSymbolDefinition> { rewardA, rewardB, rewardC };
@@ -1224,6 +1252,21 @@ namespace Subspace.Editor
         private static Material LoadMonsterOneMaterial()
         {
             return AssetDatabase.LoadAssetAtPath<Material>(MonsterOneMaterialPath);
+        }
+
+        private static SkeletonDataAsset LoadMonsterThreeSkeleton()
+        {
+            return AssetDatabase.LoadAssetAtPath<SkeletonDataAsset>(MonsterThreeSkeletonPath);
+        }
+
+        private static Material LoadMonsterThreeMaterial()
+        {
+            return AssetDatabase.LoadAssetAtPath<Material>(MonsterThreeMaterialPath);
+        }
+
+        private static GameObject LoadMonsterThreeAttackEffect()
+        {
+            return AssetDatabase.LoadAssetAtPath<GameObject>(MonsterThreeAttackEffectPath);
         }
 
         private static bool ContainsSameSymbols(IReadOnlyList<SubspaceSymbolDefinition> currentSymbols, IReadOnlyList<SubspaceSymbolDefinition> expectedSymbols, int expectedCount, int expectedStartIndex = 0)

@@ -25,17 +25,21 @@ MonoBehaviour:
   monsterDisplayName: "\u951A\u70B9\u541E\u566C\u8005"
   monsterPressureType: 4
   monsterPressureAmount: 1
+  enemyFailureAttackEffectPrefab: {fileID: 0}
+  enemyFailureAttackEffectOffset: {x: 0, y: -48}
+  enemyFailureAttackEffectSize: {x: 180, y: 180}
+  enemyFailureAttackEffectDuration: 0.65
   briefingBackgroundOverride: {fileID: 0}
   enemySpriteOverride: {fileID: 0}
-  enemySpineSkeleton: {fileID: 0}
-  enemySpineMaterial: {fileID: 0}
+  enemySpineSkeleton: {fileID: 11400000, guid: f17a0fc6381fb7747b2eee3c2f4b7066, type: 2}
+  enemySpineMaterial: {fileID: 2100000, guid: 26e099448498d1a4c82e467f5a7895c1, type: 2}
   enemySpineIdleAnimation: stand
   enemySpineAttackAnimation: attack
   enemySpineHitAnimation: stand
   enemySpineDefeatedAnimation: stand
-  enemySpineAnchoredPosition: {x: 0, y: -24}
+  enemySpineAnchoredPosition: {x: 0, y: -60}
   enemySpineSize: {x: 220, y: 150}
-  enemySpineScale: {x: 1, y: 1, z: 1}
+  enemySpineScale: {x: 1.5, y: 1.5, z: 1}
   rewardChoices:
   - {fileID: 11400000, guid: 792e757988a5a3c418905b366bcdb96b, type: 2}
   - {fileID: 11400000, guid: c162900844881ba4b8a071fd02a1c4a0, type: 2}

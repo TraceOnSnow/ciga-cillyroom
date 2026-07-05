@@ -154,13 +154,13 @@ namespace Subspace
                 return;
             }
 
-           Vector2 cellSize = boardController.GetCellSize();
+           Vector2 stride = boardController.GetCellStride();
            selectorRect.anchorMin = new Vector2(0f, 1f);
            selectorRect.anchorMax = new Vector2(0f, 1f);
            selectorRect.pivot = new Vector2(0f, 1f);
            var bounds = shape.GetBounds();
-           selectorRect.sizeDelta = new Vector2(cellSize.x * bounds.width, cellSize.y * bounds.height);
-           selectorRect.anchoredPosition = new Vector2(bounds.x * cellSize.x, -bounds.y * cellSize.y);
+           selectorRect.sizeDelta = boardController.GetSelectionSize(bounds.width, bounds.height);
+           selectorRect.anchoredPosition = new Vector2(bounds.x * stride.x, -bounds.y * stride.y);
        }
 
         private void EnsureVisibleSelector()

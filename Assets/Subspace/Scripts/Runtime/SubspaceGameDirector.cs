@@ -9,7 +9,7 @@ namespace Subspace
 {
     public sealed class SubspaceGameDirector : MonoBehaviour
     {
-        private const int ForcedFailurePenalty = 9999;
+        private const int DebugScorePenalty = 99999;
 
         [Header("Data")]
         [SerializeField] private SubspaceGameConfig config;
@@ -55,7 +55,9 @@ namespace Subspace
         [SerializeField] private float beamEndExtension;
 
         [Header("Failure Debug")]
+        [HideInInspector]
         [SerializeField] private bool forceFailureOnNextAttack;
+        [HideInInspector]
         [SerializeField] private bool keepForceFailureEnabled;
 
         [Header("Failure Counterattack")]
@@ -107,7 +109,50 @@ namespace Subspace
 
         public void ForceFailureForTest()
         {
-            forceFailureOnNextAttack = true;
+            SubtractScoreForDebug();
+        }
+
+        public void SubtractScoreForDebug()
+        {
+            AddScoreForDebug(-DebugScorePenalty);
+        }
+
+        public void AddScoreForDebug()
+        {
+            AddScoreForDebug(DebugScorePenalty);
+        }
+
+        public void FailImmediatelyForDebug()
+        {
+            if (currentLevel == null)
+            {
+                Debug.Log("[Subspace Debug] Immediate failure skipped: no active level.");
+                return;
+            }
+
+            if (busy)
+            {
+                Debug.Log("[Subspace Debug] Immediate failure skipped: director is busy.");
+                return;
+            }
+
+            remainingTurns = 0;
+            ui.Refresh(currentLevel, totalScore, remainingTurns, 0, new List<string> { "\u8c03\u8bd5: \u76f4\u63a5\u5931\u8d25" }, activeUpgrades);
+            StartCoroutine(DebugFailureRoutine());
+        }
+
+        private void AddScoreForDebug(int amount)
+        {
+            if (currentLevel == null)
+            {
+                Debug.Log("[Subspace Debug] Score adjustment skipped: no active level.");
+                return;
+            }
+
+            totalScore += amount;
+            string sign = amount >= 0 ? "+" : string.Empty;
+            ui.Refresh(currentLevel, totalScore, remainingTurns, 0, new List<string> { $"\u8c03\u8bd5: {sign}{amount}" }, activeUpgrades);
+            Debug.Log($"[Subspace Debug] Score adjusted: {sign}{amount}. Turns remain {remainingTurns}.");
         }
 
         public void ConfigureBeamPlacement(Transform startPoint, Transform endPoint)
@@ -262,15 +307,14 @@ namespace Subspace
             timeRewindAvailable = HasActiveUpgrade(SubspaceUpgradeType.TimeRewind);
             busy = false;
 
-            player.SetColors(artSet.playerColor, artSet.playerAttackColor, artSet.playerColor);
+            player.SetColors(Color.white, artSet.playerAttackColor, Color.white);
             enemy.SetColors(artSet.enemyColor, artSet.enemyColor, artSet.defeatedEnemyColor);
             enemy.SetAnimatorStateNames("Stand", "Attack", "Hit", "Defeated");
             enemy.ApplySpineLevel(currentLevel);
             LowerEnemyPortraitForHpBar();
-            var playerPortrait = ui != null ? ui.EnsurePlayerPortraitImage() : null;
-            if (player != null && playerPortrait != null)
+            if (ui != null)
             {
-                player.AddMirrorImage(playerPortrait);
+                ui.HidePlayerPortraitImage();
             }
 
             player.ShowIdle(GetPlayerIdle());
@@ -370,11 +414,10 @@ namespace Subspace
             scansUsedThisTurn++;
             board.RefreshAll();
             totalScore += result.total;
-            bool forcedFailure = forceFailureOnNextAttack;
             if (forceFailureOnNextAttack)
             {
-                totalScore -= ForcedFailurePenalty;
-                Debug.Log($"[Subspace Debug] Force failure test applied: score -{ForcedFailurePenalty}.");
+                totalScore -= DebugScorePenalty;
+                Debug.Log($"[Subspace Debug] Score penalty test applied: score -{DebugScorePenalty}.");
                 forceFailureOnNextAttack = keepForceFailureEnabled;
             }
 
@@ -389,11 +432,6 @@ namespace Subspace
                 remainingTurns += result.turnDelta;
             }
 
-            if (forcedFailure)
-            {
-                remainingTurns = 0;
-                scansUsedThisTurn = 0;
-            }
             ui.Refresh(currentLevel, totalScore, remainingTurns, result.total, result.lines, activeUpgrades);
             ui.SetDamageBreakdown(result.sources);
             LogScoreSources(result, selection.CurrentSelection);
@@ -794,9 +832,18 @@ namespace Subspace
         {
             yield return new WaitForSeconds(enemyCounterAttackDelay);
 
+            Coroutine effectRoutine = currentLevel != null && currentLevel.enemyFailureAttackEffectPrefab != null
+                ? StartCoroutine(PlayEnemyFailureAttackEffect())
+                : null;
+
             if (enemy != null)
             {
                 yield return enemy.PlayAttack(GetEnemyIdle(), enemyCounterAttackDuration);
+            }
+
+            if (effectRoutine != null)
+            {
+                yield return effectRoutine;
             }
 
             if (player != null)
@@ -804,6 +851,63 @@ namespace Subspace
                 yield return player.PlayHit(GetPlayerIdle(), playerHitDuration);
                 player.ShowIdle(GetPlayerIdle());
             }
+        }
+
+        private IEnumerator PlayEnemyFailureAttackEffect()
+        {
+            if (currentLevel == null || currentLevel.enemyFailureAttackEffectPrefab == null || player == null)
+            {
+                yield break;
+            }
+
+            var sourceInstance = Instantiate(currentLevel.enemyFailureAttackEffectPrefab, transform, true);
+            sourceInstance.name = currentLevel.enemyFailureAttackEffectPrefab.name;
+            sourceInstance.transform.position = player.transform.position;
+
+            var sourceRenderer = sourceInstance.GetComponentInChildren<SpriteRenderer>(true);
+            if (sourceRenderer == null)
+            {
+                Destroy(sourceInstance);
+                yield break;
+            }
+
+            foreach (var renderer in sourceInstance.GetComponentsInChildren<SpriteRenderer>(true))
+            {
+                renderer.enabled = false;
+            }
+
+            var effectObject = new GameObject($"{sourceInstance.name} UI", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            effectObject.transform.SetParent(ui != null ? ui.transform : transform, false);
+            effectObject.transform.SetAsLastSibling();
+
+            var rect = effectObject.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.position = player.transform.position;
+            rect.anchoredPosition += currentLevel.enemyFailureAttackEffectOffset;
+            rect.sizeDelta = currentLevel.enemyFailureAttackEffectSize == Vector2.zero
+                ? new Vector2(180f, 180f)
+                : currentLevel.enemyFailureAttackEffectSize;
+
+            var image = effectObject.GetComponent<Image>();
+            image.raycastTarget = false;
+            image.preserveAspect = true;
+
+            float duration = currentLevel.enemyFailureAttackEffectDuration > 0f
+                ? currentLevel.enemyFailureAttackEffectDuration
+                : enemyCounterAttackDuration;
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                image.sprite = sourceRenderer.sprite;
+                image.color = sourceRenderer.color;
+                yield return null;
+            }
+
+            Destroy(effectObject);
+            Destroy(sourceInstance);
         }
 
         private void ShowFailureMessage()
@@ -814,6 +918,15 @@ namespace Subspace
                 textConfig.failureButtonText,
                 BeginLevel);
             busy = false;
+        }
+
+        private IEnumerator DebugFailureRoutine()
+        {
+            busy = true;
+            ui.SetAttackEnabled(false);
+            audioController?.PlayPlayerDeath();
+            yield return PlayFailureCounterAttack();
+            ShowFailureMessage();
         }
 
        private void ShowRewards()
@@ -1021,7 +1134,7 @@ namespace Subspace
             }
 
             var spine = enemy.GetComponentInChildren<SubspaceSpineActorView>(true);
-            if (spine != null && spine.transform is RectTransform spineRect)
+            if (spine != null && spine.transform is RectTransform spineRect && currentLevel == null)
             {
                 spineRect.anchoredPosition = new Vector2(spineRect.anchoredPosition.x, -42f);
             }
